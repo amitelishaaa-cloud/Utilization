@@ -1,3 +1,33 @@
+export type PipelineStage = 'inquiry' | 'proposal' | 'negotiation' | 'verbal_close' | 'contract'
+export type DealStatus = 'active' | 'won' | 'lost'
+
+export type PipelineDeal = {
+  id: string
+  user_id: string
+  client_id: string | null
+  name: string
+  pricing_type: PricingType
+  estimated_hours: number
+  hourly_rate: number | null
+  fixed_price: number | null
+  expected_start_date: string
+  expected_end_date: string
+  current_stage: PipelineStage
+  probability_override: number | null
+  status: DealStatus
+  created_at: string
+  closed_at: string | null
+  clients?: { name: string } | null
+}
+
+export type PipelineStageHistory = {
+  id: string
+  deal_id: string
+  from_stage: PipelineStage | null
+  to_stage: PipelineStage
+  changed_at: string
+}
+
 export type Client = {
   id: string
   user_id: string

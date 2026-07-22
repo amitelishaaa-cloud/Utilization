@@ -8,12 +8,12 @@ function parseProjectForm(formData: FormData) {
   const client_id = formData.get('client_id') as string
   const pricing_type = formData.get('pricing_type') as 'hourly' | 'fixed'
   const estimated_hours = parseFloat(formData.get('estimated_hours') as string)
-  const actual_hours_raw = (formData.get('actual_hours') as string).trim()
+  const actual_hours_raw = ((formData.get('actual_hours') as string) ?? '').trim()
   const actual_hours = actual_hours_raw ? parseFloat(actual_hours_raw) : null
   const start_date = formData.get('start_date') as string
   const end_date = formData.get('end_date') as string
   const is_end_date_estimated = formData.get('is_end_date_estimated') === 'on'
-  const status = formData.get('status') as 'active' | 'completed' | 'cancelled'
+  const status = (formData.get('status') as 'active' | 'completed' | 'cancelled') ?? 'active'
 
   let hourly_rate: number | null = null
   let fixed_price: number | null = null

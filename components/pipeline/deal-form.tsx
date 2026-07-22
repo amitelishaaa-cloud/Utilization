@@ -3,7 +3,8 @@ import { useActionState } from 'react'
 import Link from 'next/link'
 import FormField from '@/components/ui/form-field'
 import PricingFields from '@/components/ui/pricing-fields'
-import type { Client, Project } from '@/lib/types'
+import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
+import type { Client, PipelineDeal } from '@/lib/types'
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent'
@@ -13,21 +14,27 @@ type ActionFn = (
   formData: FormData,
 ) => Promise<{ error: string | null }>
 
-interface ProjectFormProps {
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'פעיל' },
+  { value: 'won',    label: 'נסגר בהצלחה' },
+  { value: 'lost',   label: 'נפל' },
+]
+
+interface DealFormProps {
   action: ActionFn
   clients: Pick<Client, 'id' | 'name'>[]
-  defaultValues?: Partial<Project>
+  defaultValues?: Partial<PipelineDeal>
   mode: 'create' | 'edit'
 }
 
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: 'active', label: 'פעיל' },
-  { value: 'completed', label: 'הושלם' },
-  { value: 'cancelled', label: 'בוטל' },
-]
-
-export default function ProjectForm({ action, clients, defaultValues, mode }: ProjectFormProps) {
+export default function DealForm({ action, clients, defaultValues, mode }: DealFormProps) {
   const [state, formAction, isPending] = useActionState(action, { error: null })
+
+  // probability_override is stored 0–1 in DB; display as 0–100 to the user
+  const defaultProbabilityPct =
+    defaultValues?.probability_override != null
+      ? Math.round(defaultValues.probability_override * 100)
+      : ''
 
   return (
     <form action={formAction} className="bg-white border border-gray-200 rounded-xl p-6 max-w-2xl space-y-6">
@@ -37,21 +44,20 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
         </div>
       )}
 
-      <FormField label="לקוח" required>
+      <FormField label="לקוח">
         <select
           name="client_id"
           defaultValue={defaultValues?.client_id ?? ''}
-          required
           className={INPUT_CLASS}
         >
-          <option value="" disabled>בחר לקוח...</option>
+          <option value="">ללא לקוח</option>
           {clients.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
       </FormField>
 
-      <FormField label="שם פרויקט" required>
+      <FormField label="שם העסקה" required>
         <input
           type="text"
           name="name"
@@ -59,9 +65,41 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
           required
           autoFocus={mode === 'create'}
           className={INPUT_CLASS}
-          placeholder="לדוגמה: בניית אתר לקוח"
+          placeholder="לדוגמה: אתר אינטרנט לחברת XYZ"
         />
       </FormField>
+
+      <div className="grid grid-cols-2 gap-4">
+        <FormField label="שלב בצינור" required>
+          <select
+            name="current_stage"
+            defaultValue={defaultValues?.current_stage ?? 'inquiry'}
+            required
+            className={INPUT_CLASS}
+          >
+            {(Object.entries(PIPELINE_STAGES) as [string, { label: string; probability: number }][]).map(
+              ([key, { label, probability }]) => (
+                <option key={key} value={key}>
+                  {label} ({Math.round(probability * 100)}%)
+                </option>
+              ),
+            )}
+          </select>
+        </FormField>
+
+        <FormField label="הסתברות אישית (%)" hint="אופציונלי — ברירת מחדל לפי שלב">
+          <input
+            type="number"
+            name="probability_override"
+            min="0"
+            max="100"
+            step="1"
+            defaultValue={defaultProbabilityPct}
+            className={INPUT_CLASS}
+            placeholder="ברירת מחדל לפי שלב"
+          />
+        </FormField>
+      </div>
 
       <PricingFields
         fixedOptionValue="fixed"
@@ -73,62 +111,37 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
         defaultFixedValue={defaultValues?.fixed_price}
       />
 
-      <div className="grid grid-cols-2 gap-4">
-        <FormField label="שעות מוערכות" required>
-          <input
-            type="number"
-            name="estimated_hours"
-            min="0.5"
-            step="0.5"
-            defaultValue={defaultValues?.estimated_hours ?? ''}
-            required
-            className={INPUT_CLASS}
-          />
-        </FormField>
-        {mode === 'edit' && (
-          <FormField label="שעות בפועל" hint="אופציונלי">
-            <input
-              type="number"
-              name="actual_hours"
-              min="0"
-              step="0.5"
-              defaultValue={defaultValues?.actual_hours ?? ''}
-              className={INPUT_CLASS}
-            />
-          </FormField>
-        )}
-      </div>
+      <FormField label="שעות מוערכות" required>
+        <input
+          type="number"
+          name="estimated_hours"
+          min="0.5"
+          step="0.5"
+          defaultValue={defaultValues?.estimated_hours ?? ''}
+          required
+          className={INPUT_CLASS}
+        />
+      </FormField>
 
       <div className="grid grid-cols-2 gap-4">
-        <FormField label="תאריך התחלה" required>
+        <FormField label="תאריך התחלה צפוי" required>
           <input
             type="date"
-            name="start_date"
-            defaultValue={defaultValues?.start_date ?? ''}
+            name="expected_start_date"
+            defaultValue={defaultValues?.expected_start_date ?? ''}
             required
             className={INPUT_CLASS}
           />
         </FormField>
-        <div className="space-y-1.5">
-          <FormField label="תאריך סיום" required>
-            <input
-              type="date"
-              name="end_date"
-              defaultValue={defaultValues?.end_date ?? ''}
-              required
-              className={INPUT_CLASS}
-            />
-          </FormField>
-          <label className="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
-            <input
-              type="checkbox"
-              name="is_end_date_estimated"
-              defaultChecked={defaultValues?.is_end_date_estimated ?? false}
-              className="accent-gray-900"
-            />
-            לא בטוח בתאריך? סמן שזו הערכה
-          </label>
-        </div>
+        <FormField label="תאריך סיום צפוי" required>
+          <input
+            type="date"
+            name="expected_end_date"
+            defaultValue={defaultValues?.expected_end_date ?? ''}
+            required
+            className={INPUT_CLASS}
+          />
+        </FormField>
       </div>
 
       {mode === 'edit' && (
@@ -152,10 +165,10 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
           disabled={isPending}
           className="px-5 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
         >
-          {isPending ? 'שומר...' : mode === 'create' ? 'צור פרויקט' : 'שמור שינויים'}
+          {isPending ? 'שומר...' : mode === 'create' ? 'צור עסקה' : 'שמור שינויים'}
         </button>
         <Link
-          href="/projects"
+          href="/pipeline"
           className="px-5 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
         >
           ביטול

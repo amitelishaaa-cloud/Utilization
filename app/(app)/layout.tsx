@@ -4,6 +4,7 @@ const navItems = [
   { href: '/clients', label: 'לקוחות' },
   { href: '/projects', label: 'פרויקטים' },
   { href: '/retainers', label: 'רטיינרים' },
+  { href: '/pipeline', label: 'Pipeline' },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
