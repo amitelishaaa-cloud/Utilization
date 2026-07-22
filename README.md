@@ -1,36 +1,111 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Utilization
 
-## Getting Started
+A freelancer utilization management tool — track clients, projects, retainers, pipeline deals, and weekly capacity.
 
-First, run the development server:
+**Stack**: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, Supabase.
+
+---
+
+## Local Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/amitelishaaa-cloud/Utilization.git
+cd Utilization
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Set up Supabase
+
+Create a new project at [supabase.com](https://supabase.com), then run the migrations in order:
+
+```bash
+# Using the Supabase CLI (recommended)
+supabase link --project-ref <your-project-ref>
+supabase db push
+
+# Or run the SQL files manually in the Supabase SQL editor:
+# supabase/migrations/20260722000001_create_enums.sql
+# supabase/migrations/20260722000002_create_users.sql
+# ... (all files in order)
+```
+
+### 4. Configure environment variables
+
+```bash
+cp .env.local.example .env.local
+```
+
+Fill in `.env.local`:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+DEV_USER_ID=<your-supabase-user-uuid>   # used in dev to bypass auth
+```
+
+Find these values in your Supabase project under **Settings → API**.
+
+### 5. Run the dev server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Commands
 
-## Learn More
+```bash
+npm run dev      # development server (Turbopack)
+npm run build    # production build + TypeScript check
+npm run start    # serve production build
+```
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+  (app)/
+    clients/     # Client list, create, edit
+    projects/    # Project list, create, edit
+    retainers/   # Retainer list, create, edit
+components/
+  clients/       # ClientForm, ClientsTable
+  projects/      # ProjectForm, ProjectsTable
+  retainers/     # RetainerForm, RetainersTable
+  ui/            # Shared components (FormField, NavLink, ConfirmDialog…)
+lib/
+  supabase/      # Server & browser Supabase client factories
+  types.ts       # Shared TypeScript types
+supabase/
+  migrations/    # SQL migration files (run in order)
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Database Schema
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The schema covers 8 tables with Row-Level Security:
+
+| Table | Purpose |
+|---|---|
+| `users` | Freelancer profile (name, weekly capacity, hourly rate) |
+| `clients` | Client directory |
+| `projects` | Fixed-fee and hourly projects |
+| `retainers` | Recurring monthly engagements |
+| `pipeline_deals` | Pre-project opportunities |
+| `project_weekly_allocations` | Hours planned per project per week |
+| `capacity_exceptions` | Vacation / sick days / public holidays |
+| `pipeline_stage_history` | Audit log of deal stage changes |
