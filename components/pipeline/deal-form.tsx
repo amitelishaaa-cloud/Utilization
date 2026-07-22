@@ -115,7 +115,7 @@ export default function DealForm({ action, clients, defaultValues, mode }: DealF
         <input
           type="number"
           name="estimated_hours"
-          min="0.1"
+          min="0.5"
           step="0.5"
           defaultValue={defaultValues?.estimated_hours ?? ''}
           required
