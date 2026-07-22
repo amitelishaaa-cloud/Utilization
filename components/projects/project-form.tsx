@@ -78,23 +78,25 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
           <input
             type="number"
             name="estimated_hours"
-            min="0.1"
+            min="0.5"
             step="0.5"
             defaultValue={defaultValues?.estimated_hours ?? ''}
             required
             className={INPUT_CLASS}
           />
         </FormField>
-        <FormField label="שעות בפועל" hint="אופציונלי">
-          <input
-            type="number"
-            name="actual_hours"
-            min="0"
-            step="0.5"
-            defaultValue={defaultValues?.actual_hours ?? ''}
-            className={INPUT_CLASS}
-          />
-        </FormField>
+        {mode === 'edit' && (
+          <FormField label="שעות בפועל" hint="אופציונלי">
+            <input
+              type="number"
+              name="actual_hours"
+              min="0"
+              step="0.5"
+              defaultValue={defaultValues?.actual_hours ?? ''}
+              className={INPUT_CLASS}
+            />
+          </FormField>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -129,18 +131,20 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
         </div>
       </div>
 
-      <FormField label="סטטוס" required>
-        <select
-          name="status"
-          defaultValue={defaultValues?.status ?? 'active'}
-          required
-          className={INPUT_CLASS}
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
-      </FormField>
+      {mode === 'edit' && (
+        <FormField label="סטטוס" required>
+          <select
+            name="status"
+            defaultValue={defaultValues?.status ?? 'active'}
+            required
+            className={INPUT_CLASS}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        </FormField>
+      )}
 
       <div className="flex gap-3 pt-2">
         <button
