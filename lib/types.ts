@@ -74,3 +74,19 @@ export type Retainer = {
   created_at: string
   clients?: { name: string } | null
 }
+
+export type ProjectWeeklyAllocation = {
+  id: string
+  project_id: string
+  week_start: string       // ISO date YYYY-MM-DD, always a Monday
+  allocated_hours: number
+}
+
+export type CapacityException = {
+  id: string
+  user_id: string
+  week_start: string       // ISO date YYYY-MM-DD, always a Monday
+  available_hours: number
+  reason: string | null
+  created_at: string
+}
