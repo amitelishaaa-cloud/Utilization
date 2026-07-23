@@ -41,6 +41,20 @@ describe('groupWeeksByMonth', () => {
   it('returns empty array for empty input', () => {
     expect(groupWeeksByMonth([])).toEqual([])
   })
+
+  it('uses capacity-weighted formula when weeks have different capacities (capacity_exceptions)', () => {
+    const weeks: WeekBreakdown[] = [
+      // Week 1: normal capacity → 80% utilization
+      { weekStart: '2026-07-06', committedHours: 32, pipelineHours: 0, capacity: 40, utilization: 0.80 },
+      // Week 2: half capacity (capacity_exception) → 90% utilization
+      { weekStart: '2026-07-13', committedHours: 18, pipelineHours: 0, capacity: 20, utilization: 0.90 },
+    ]
+    const months = groupWeeksByMonth(weeks)
+    expect(months).toHaveLength(1)
+    // Capacity-weighted: (32+18) / (40+20) = 50/60 ≈ 0.8333
+    // Simple average would give (0.80+0.90)/2 = 0.85 — wrong
+    expect(months[0].utilization).toBeCloseTo(50 / 60, 4)
+  })
 })
 
 // ── getHeroMonth ─────────────────────────────────────────────────────────────

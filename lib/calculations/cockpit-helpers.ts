@@ -4,7 +4,7 @@ export type MonthSummary = {
   yearMonth: string    // "2026-07"
   monthLabel: string   // "יולי 2026"
   monthIndex: number   // 1-based
-  utilization: number  // average weekly utilization for the month
+  utilization: number  // capacity-weighted utilization: Σ(committed+pipeline) / Σcapacity
   weeks: WeekBreakdown[]
 }
 
@@ -31,14 +31,17 @@ export function groupWeeksByMonth(weeks: WeekBreakdown[]): MonthSummary[] {
     if (!groups.has(key)) groups.set(key, [])
     groups.get(key)!.push(week)
   }
-  return Array.from(groups.entries()).map(([yearMonth, monthWeeks], i) => ({
-    yearMonth,
-    monthLabel: formatMonthLabel(yearMonth),
-    monthIndex: i + 1,
-    utilization:
-      monthWeeks.reduce((sum, w) => sum + w.utilization, 0) / monthWeeks.length,
-    weeks: monthWeeks,
-  }))
+  return Array.from(groups.entries()).map(([yearMonth, monthWeeks], i) => {
+    const totalCapacity = monthWeeks.reduce((sum, w) => sum + w.capacity, 0)
+    const totalHours = monthWeeks.reduce((sum, w) => sum + w.committedHours + w.pipelineHours, 0)
+    return {
+      yearMonth,
+      monthLabel: formatMonthLabel(yearMonth),
+      monthIndex: i + 1,
+      utilization: totalCapacity > 0 ? totalHours / totalCapacity : 0,
+      weeks: monthWeeks,
+    }
+  })
 }
 
 export function getHeroMonth(
