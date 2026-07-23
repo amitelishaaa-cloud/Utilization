@@ -118,4 +118,45 @@ describe('calcRecommendation', () => {
     expect(result.affectedMonthIndex).toBeNull()
     expect(result.affectedMonthUtilization).toBeNull()
   })
+
+  // first month in warning range (50–79%), no gaps or overload
+  it('first month in warning range → warning yellow, monthIndex=1', () => {
+    const weeks = makeWeeks([
+      { weekStart: '2026-07-06', utilization: 0.65 },
+      { weekStart: '2026-07-13', utilization: 0.65 },
+      { weekStart: '2026-07-20', utilization: 0.65 },
+      { weekStart: '2026-07-27', utilization: 0.65 },
+    ])
+    const result = calcRecommendation(weeks)
+    expect(result.tag).toBe('warning')
+    expect(result.color).toBe('yellow')
+    expect(result.affectedMonthIndex).toBe(1)
+    expect(result.affectedMonthUtilization).toBeCloseTo(0.65, 4)
+  })
+
+  // months 1+2 are healthy; month 3 has <50% → far_gap, monthIndex=3
+  it('third month <50%, first two healthy → far_gap yellow, monthIndex=3', () => {
+    const weeks = makeWeeks([
+      // July — month 1 (85%)
+      { weekStart: '2026-07-06', utilization: 0.85 },
+      { weekStart: '2026-07-13', utilization: 0.85 },
+      { weekStart: '2026-07-20', utilization: 0.85 },
+      { weekStart: '2026-07-27', utilization: 0.85 },
+      // August — month 2 (85%)
+      { weekStart: '2026-08-03', utilization: 0.85 },
+      { weekStart: '2026-08-10', utilization: 0.85 },
+      { weekStart: '2026-08-17', utilization: 0.85 },
+      { weekStart: '2026-08-24', utilization: 0.85 },
+      // September — month 3 (30%, far_gap)
+      { weekStart: '2026-09-07', utilization: 0.30 },
+      { weekStart: '2026-09-14', utilization: 0.30 },
+      { weekStart: '2026-09-21', utilization: 0.30 },
+      { weekStart: '2026-09-28', utilization: 0.30 },
+    ])
+    const result = calcRecommendation(weeks)
+    expect(result.tag).toBe('far_gap')
+    expect(result.color).toBe('yellow')
+    expect(result.affectedMonthIndex).toBe(3)
+    expect(result.affectedMonthUtilization).toBeCloseTo(0.30, 4)
+  })
 })

@@ -6,6 +6,7 @@ import type { WeekBreakdown, UtilizationInput, RecommendationResult } from './ty
 export type UtilizationFetchResult = {
   weeks: WeekBreakdown[]
   recommendation: RecommendationResult
+  plan: 'free' | 'pro'
 }
 
 export async function fetchUtilization(
@@ -24,7 +25,7 @@ export async function fetchUtilization(
     { data: deals },
     { data: capacityExceptions },
   ] = await Promise.all([
-    supabase.from('users').select('default_weekly_hours').eq('id', userId).single(),
+    supabase.from('users').select('default_weekly_hours, plan').eq('id', userId).single(),
     supabase
       .from('projects')
       .select('*')
@@ -77,5 +78,5 @@ export async function fetchUtilization(
   }
 
   const weeks = calcWeeklyUtilization(input)
-  return { weeks, recommendation: calcRecommendation(weeks) }
+  return { weeks, recommendation: calcRecommendation(weeks), plan: (user?.plan ?? 'free') as 'free' | 'pro' }
 }

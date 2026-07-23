@@ -1,6 +1,7 @@
 import NavLink from '@/components/ui/nav-link'
 
 const navItems = [
+  { href: '/cockpit', label: 'לוח בקרה' },
   { href: '/clients', label: 'לקוחות' },
   { href: '/projects', label: 'פרויקטים' },
   { href: '/retainers', label: 'רטיינרים' },
