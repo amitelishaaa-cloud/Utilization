@@ -45,11 +45,11 @@ export function getHeroMonth(
   weeks: WeekBreakdown[],
   recommendation: RecommendationResult,
 ): HeroMonth {
+  const months = groupWeeksByMonth(weeks)
   if (
     recommendation.affectedMonthIndex !== null &&
     recommendation.affectedMonthUtilization !== null
   ) {
-    const months = groupWeeksByMonth(weeks)
     const month = months[recommendation.affectedMonthIndex - 1]
     return {
       monthIndex: recommendation.affectedMonthIndex,
@@ -58,7 +58,6 @@ export function getHeroMonth(
     }
   }
   // fallback: optimal / sustained_high → show month 1
-  const months = groupWeeksByMonth(weeks)
   const first = months[0]
   return {
     monthIndex: 1,
@@ -78,7 +77,7 @@ export function getStartOfCurrentWeek(today: Date = new Date()): Date {
 
 export function addMonths(date: Date, n: number): Date {
   const d = new Date(date)
-  d.setMonth(d.getMonth() + n)
+  d.setUTCMonth(d.getUTCMonth() + n)
   return d
 }
 

@@ -20,7 +20,7 @@ export function ForecastBlurGate({
           <p className="text-xs text-gray-500 mb-4">
             תחזית ל-3 חודשים, המלצות אישיות, ופירוט שבועי
           </p>
-          <button className="px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">
+          <button type="button" className="px-6 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors">
             שדרג לפרו
           </button>
         </div>

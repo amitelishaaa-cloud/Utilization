@@ -113,9 +113,7 @@ describe('getStartOfCurrentWeek', () => {
 describe('addMonths', () => {
   it('adds 3 months to a date', () => {
     const result = addMonths(new Date('2026-07-20'), 3)
-    expect(result.getFullYear()).toBe(2026)
-    expect(result.getMonth()).toBe(9) // October, 0-indexed
-    expect(result.getDate()).toBe(20)
+    expect(result.toISOString().slice(0, 10)).toBe('2026-10-20')
   })
 })
 
@@ -146,4 +144,9 @@ describe('utilizationBarColorClass', () => {
   it('50–79% → bg-yellow-400', () => expect(utilizationBarColorClass(0.65)).toBe('bg-yellow-400'))
   it('80–110% → bg-green-500', () => expect(utilizationBarColorClass(0.9)).toBe('bg-green-500'))
   it('> 110% → bg-red-900', () => expect(utilizationBarColorClass(1.2)).toBe('bg-red-900'))
+  // boundary checks
+  it('exactly 50% → bg-yellow-400', () => expect(utilizationBarColorClass(0.5)).toBe('bg-yellow-400'))
+  it('exactly 80% → bg-green-500', () => expect(utilizationBarColorClass(0.8)).toBe('bg-green-500'))
+  it('exactly 110% → bg-green-500', () => expect(utilizationBarColorClass(1.1)).toBe('bg-green-500'))
+  it('110.1% → bg-red-900', () => expect(utilizationBarColorClass(1.101)).toBe('bg-red-900'))
 })
