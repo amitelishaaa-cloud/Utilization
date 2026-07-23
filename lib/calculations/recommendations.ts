@@ -41,14 +41,21 @@ export function calcRecommendation(weeks: WeekBreakdown[]): RecommendationResult
     utilization: capacity > 0 ? (committed + pipeline) / capacity : 0,
   }))
 
+  // Pass 1: overload anywhere always takes priority — return earliest overloaded month
   for (let i = 0; i < months.length; i++) {
     const u = months[i].utilization
-    const idx = i + 1
     if (u > 1.10) {
+      const idx = i + 1
       return makeResult('overload', 'red',
         `ניצול צפוי של ${pct(u)} בחודש ${idx} — הפרויקטים והעסקאות הקיימים עשויים לחרוג מהקיבולת`,
         idx, u)
     }
+  }
+
+  // Pass 2: no overload — scan chronologically for gaps and warnings
+  for (let i = 0; i < months.length; i++) {
+    const u = months[i].utilization
+    const idx = i + 1
     if (u < 0.50) {
       if (i === 0) return makeResult('urgent_gap', 'dark_red',
         `ניצול צפוי של ${pct(u)} בחודש הקרוב — אין מספיק עבודה מאושרת או pipeline שמכסה את הקיבולת`,

@@ -79,6 +79,27 @@ describe('calcRecommendation', () => {
     expect(result.affectedMonthUtilization).toBeCloseTo(1.175, 4)
   })
 
+  // overload in a later month beats warning in an earlier month
+  it('overload in month 2 wins over warning in month 1', () => {
+    const weeks = makeWeeks([
+      // Month 1 — July: 65% (warning range)
+      { weekStart: '2025-07-07', utilization: 0.65 },
+      { weekStart: '2025-07-14', utilization: 0.65 },
+      { weekStart: '2025-07-21', utilization: 0.65 },
+      { weekStart: '2025-07-28', utilization: 0.65 },
+      // Month 2 — August: 115% (overload)
+      { weekStart: '2025-08-04', utilization: 1.15 },
+      { weekStart: '2025-08-11', utilization: 1.15 },
+      { weekStart: '2025-08-18', utilization: 1.15 },
+      { weekStart: '2025-08-25', utilization: 1.15 },
+    ])
+    const result = calcRecommendation(weeks)
+    expect(result.tag).toBe('overload')
+    expect(result.color).toBe('red')
+    expect(result.affectedMonthIndex).toBe(2)
+    expect(result.affectedMonthUtilization).toBeCloseTo(1.15, 4)
+  })
+
   // All months optimal but 2+ months >90% → sustained_high, no specific affected month
   it('2+ months >90% → sustained_high blue, no affected month', () => {
     const weeks = makeWeeks([
