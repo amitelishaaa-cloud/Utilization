@@ -19,16 +19,16 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 - `Client` — `{ id, user_id, name, created_at }`
 - `PricingType` — `'hourly' | 'fixed'`
 - `ProjectStatus` — `'active' | 'completed' | 'cancelled'`
-- `Project` — `{ id, user_id, client_id, source_deal_id, name, pricing_type, estimated_hours, actual_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status, clients? }`
+- `Project` — `{ id, user_id, client_id, source_deal_id, name, pricing_type, estimated_hours, actual_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status, notes: string | null, priority: 'low' | 'medium' | 'high' | null, clients? }`
 - `RetainerStatus` — `'active' | 'ended'`
 - `RetainerPricingType` — `'hourly' | 'fixed_monthly'`
 - `Retainer` — `{ id, user_id, client_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date, status, clients? }`
 - `PipelineStage` — `'inquiry' | 'proposal' | 'negotiation' | 'verbal_close' | 'contract'`
 - `DealStatus` — `'active' | 'won' | 'lost'`
-- `PipelineDeal` — `{ id, user_id, client_id, name, pricing_type, estimated_hours, hourly_rate, fixed_price, expected_start_date, expected_end_date, current_stage, probability_override, status, closed_at, clients? }`
+- `PipelineDeal` — `{ id, user_id, client_id, name, pricing_type, estimated_hours, hourly_rate, fixed_price, expected_start_date, expected_end_date, current_stage, probability_override, status, created_at, closed_at, clients? }`
 - `PipelineStageHistory` — `{ id, deal_id, from_stage, to_stage, changed_at }`
 - `ProjectWeeklyAllocation` — `{ id, project_id, week_start, allocated_hours }`
-- `CapacityException` — `{ id, user_id, week_start, available_hours, reason }`
+- `CapacityException` — `{ id, user_id, week_start, available_hours, reason, created_at }`
 
 **`lib/supabase/server.ts`**
 - `createServerClient()` — returns Supabase client using `SUPABASE_SERVICE_ROLE_KEY`

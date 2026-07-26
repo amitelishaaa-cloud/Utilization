@@ -55,6 +55,8 @@ export type Project = {
   end_date: string
   is_end_date_estimated: boolean
   status: ProjectStatus
+  notes: string | null
+  priority: 'low' | 'medium' | 'high' | null
   created_at: string
   clients?: { name: string } | null
 }
