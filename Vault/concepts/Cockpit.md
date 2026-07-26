@@ -1,0 +1,60 @@
+---
+tags: [ui, page, cockpit, dashboard]
+related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]], [[Projects]], [[Retainers]]
+---
+
+# Cockpit
+
+## What it does
+המסך הראשי של האפליקציה. Server Component שמשיג את נתוני הניצול ל-3 חודשים קדימה ומציג: hero metric (% ניצול של החודש הבעייתי ביותר), עמודות תחזית חודשיות עם breakdown שבועי, ובלוק המלצה. משתמשי free רואים blur על העמודות וההמלצה עם CTA לשדרוג.
+
+## Key files
+- `app/(app)/cockpit/page.tsx` — Server Component; קורא `fetchUtilization`, מחלק לcomponents
+- `lib/calculations/fetcher.ts` — `fetchUtilization()`: DB → engine → `{ weeks, recommendation, plan }`
+- `lib/calculations/cockpit-helpers.ts` — utilities לעיבוד output המנוע ל-UI
+- `components/cockpit/hero-metric.tsx` — מציג את ה-% הגדול + תווית חודש
+- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + hover week breakdown
+- `components/cockpit/recommendation-block.tsx` — תג צבעוני + טקסט המלצה
+- `components/cockpit/forecast-blur-gate.tsx` — עוטף עמודות+המלצה; blur לfree + CTA
+
+## Key types / exports
+
+**`lib/calculations/cockpit-helpers.ts`**
+- `MonthSummary` — `{ yearMonth, monthLabel, monthIndex, utilization, weeks: WeekBreakdown[] }`
+- `HeroMonth` — `{ monthIndex, monthLabel, utilization }`
+- `groupWeeksByMonth(weeks): MonthSummary[]` — ממיין weeks לחודשים, capacity-weighted utilization
+- `getHeroMonth(weeks, recommendation): HeroMonth` — מחזיר את החודש שה-recommendation מצביע עליו (fallback: חודש 1)
+- `getStartOfCurrentWeek(today?): Date` — יום שני הנוכחי (UTC)
+- `addMonths(date, n): Date` — מוסיף n חודשים (UTC)
+- `utilizationColorClass(u): string` — Tailwind text color class לפי %
+- `utilizationBarColorClass(u): string` — Tailwind bg color class לפי %
+
+**`lib/calculations/fetcher.ts`**
+- `UtilizationFetchResult` — `{ weeks: WeekBreakdown[], recommendation: RecommendationResult, plan: 'free'|'pro' }`
+- `fetchUtilization(userId, startDate, endDate): Promise<UtilizationFetchResult>`
+
+## Data flow
+
+```
+CockpitPage (Server)
+  → fetchUtilization(userId, startDate, endDate)        // fetcher.ts
+      → Supabase: users, projects, retainers, deals,
+                  capacity_exceptions, allocations
+      → calcWeeklyUtilization(input)                    // utilization.ts
+      → calcRecommendation(weeks)                       // recommendations.ts
+      → return { weeks, recommendation, plan }
+  → getHeroMonth(weeks, recommendation)                 // cockpit-helpers.ts
+  → groupWeeksByMonth(weeks)                            // cockpit-helpers.ts
+  → <HeroMetric heroMonth={...} />
+  → <ForecastBlurGate plan={plan}>
+      <ForecastColumns months={...} />
+      <RecommendationBlock recommendation={...} />
+    </ForecastBlurGate>
+```
+
+## Free-tier gate
+`users.plan === 'free'` → `ForecastBlurGate` מציג blur CSS על הילדים + CTA "שדרג לפרו לראות את התחזית המלאה"
+
+## Dependencies & consumers
+- תלוי ב: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]]
+- מייצג נתונים מ: [[Projects]], [[Retainers]], [[Pipeline]]
