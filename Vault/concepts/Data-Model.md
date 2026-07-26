@@ -19,10 +19,10 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 - `Client` — `{ id, user_id, name, created_at }`
 - `PricingType` — `'hourly' | 'fixed'`
 - `ProjectStatus` — `'active' | 'completed' | 'cancelled'`
-- `Project` — `{ id, user_id, client_id, source_deal_id, name, pricing_type, estimated_hours, actual_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status, notes: string | null, priority: 'low' | 'medium' | 'high' | null, clients? }`
+- `Project` — `{ id, user_id, client_id, source_deal_id, name, pricing_type, estimated_hours, actual_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status, notes: string | null, priority: 'low' | 'medium' | 'high' | null, created_at, clients? }`
 - `RetainerStatus` — `'active' | 'ended'`
 - `RetainerPricingType` — `'hourly' | 'fixed_monthly'`
-- `Retainer` — `{ id, user_id, client_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date, status, clients? }`
+- `Retainer` — `{ id, user_id, client_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date, status, created_at, clients? }`
 - `PipelineStage` — `'inquiry' | 'proposal' | 'negotiation' | 'verbal_close' | 'contract'`
 - `DealStatus` — `'active' | 'won' | 'lost'`
 - `PipelineDeal` — `{ id, user_id, client_id, name, pricing_type, estimated_hours, hourly_rate, fixed_price, expected_start_date, expected_end_date, current_stage, probability_override, status, created_at, closed_at, clients? }`
