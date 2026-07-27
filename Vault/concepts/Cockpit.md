@@ -13,7 +13,7 @@ related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]]
 - `lib/calculations/fetcher.ts` — `fetchUtilization()`: DB → engine → `{ weeks, recommendation, plan }`
 - `lib/calculations/cockpit-helpers.ts` — utilities לעיבוד output המנוע ל-UI
 - `components/cockpit/hero-metric.tsx` — מציג את ה-% הגדול + תווית חודש
-- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות)
+- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות); תאריכי שבועות מעוצבים דרך `formatDate()` (DD/MM/YYYY)
 - `components/cockpit/recommendation-block.tsx` — תג צבעוני + טקסט המלצה
 - `components/cockpit/forecast-blur-gate.tsx` — עוטף עמודות+המלצה; blur לfree + CTA
 
