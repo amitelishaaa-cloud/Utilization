@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { utilizationBarColorClass } from '@/lib/calculations/cockpit-helpers'
 import type { MonthSummary } from '@/lib/calculations/cockpit-helpers'
+import { formatDate } from '@/lib/utils'
 
 export function ForecastColumns({ months }: { months: MonthSummary[] }) {
   const [activeIdx, setActiveIdx] = useState<number | null>(null)
@@ -63,7 +64,7 @@ export function ForecastColumns({ months }: { months: MonthSummary[] }) {
                 key={week.weekStart}
                 className="flex justify-between text-xs text-gray-600"
               >
-                <span>{week.weekStart}</span>
+                <span>{formatDate(week.weekStart)}</span>
                 <span>{Math.round(week.utilization * 100)}%</span>
               </div>
             ))}
