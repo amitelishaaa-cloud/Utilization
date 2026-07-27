@@ -3,17 +3,26 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createServerClient, getDevUserId } from '@/lib/supabase/server'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
-import type { PipelineStage, DealStatus } from '@/lib/types'
+import type { PipelineStage, DealStatus, DealType } from '@/lib/types'
 
 function parseDealForm(formData: FormData) {
   const name = (formData.get('name') as string).trim()
   const client_id_raw = formData.get('client_id') as string
   const client_id = client_id_raw || null
   const current_stage = formData.get('current_stage') as PipelineStage
+  const deal_type = formData.get('deal_type') as DealType
   const pricing_type = formData.get('pricing_type') as 'hourly' | 'fixed'
-  const estimated_hours = parseFloat(formData.get('estimated_hours') as string)
+
+  let estimated_hours: number | null = null
+  let monthly_hours: number | null = null
+  if (deal_type === 'project') {
+    estimated_hours = parseFloat(formData.get('estimated_hours') as string)
+  } else {
+    monthly_hours = parseFloat(formData.get('monthly_hours') as string)
+  }
+
   const expected_start_date = formData.get('expected_start_date') as string
-  const expected_end_date = formData.get('expected_end_date') as string
+  const expected_end_date = (formData.get('expected_end_date') as string) || null
 
   const rawProbability = ((formData.get('probability_override') as string) ?? '').trim()
   const probability_override = rawProbability ? Number(rawProbability) / 100 : null
@@ -27,9 +36,10 @@ function parseDealForm(formData: FormData) {
   }
 
   return {
-    name, client_id, current_stage, pricing_type, estimated_hours,
-    expected_start_date, expected_end_date, probability_override,
-    hourly_rate, fixed_price,
+    name, client_id, current_stage, deal_type, pricing_type,
+    estimated_hours, monthly_hours,
+    expected_start_date, expected_end_date,
+    probability_override, hourly_rate, fixed_price,
   }
 }
 
@@ -37,11 +47,18 @@ function validateDeal(data: ReturnType<typeof parseDealForm>): string | null {
   if (!data.name) return 'שם העסקה הוא שדה חובה'
   if (!data.current_stage || !(data.current_stage in PIPELINE_STAGES))
     return 'יש לבחור שלב בצינור'
-  if (isNaN(data.estimated_hours) || data.estimated_hours <= 0)
-    return 'שעות מוערכות חייבות להיות מספר חיובי'
   if (!data.expected_start_date) return 'תאריך התחלה הוא שדה חובה'
-  if (!data.expected_end_date) return 'תאריך סיום הוא שדה חובה'
-  if (new Date(data.expected_end_date) < new Date(data.expected_start_date))
+
+  if (data.deal_type === 'project') {
+    if (isNaN(data.estimated_hours!) || data.estimated_hours! <= 0)
+      return 'שעות מוערכות חייבות להיות מספר חיובי'
+    if (!data.expected_end_date) return 'תאריך סיום הוא שדה חובה'
+  } else {
+    if (isNaN(data.monthly_hours!) || data.monthly_hours! <= 0)
+      return 'שעות חודשיות חייבות להיות מספר חיובי'
+  }
+
+  if (data.expected_end_date && new Date(data.expected_end_date) < new Date(data.expected_start_date))
     return 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה'
   if (data.probability_override !== null &&
       (data.probability_override < 0 || data.probability_override > 1))
