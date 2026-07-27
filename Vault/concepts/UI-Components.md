@@ -16,6 +16,9 @@ related: [[Cockpit]], [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]]
 - `components/ui/nav-link.tsx` — קישור ניווט עם active state
 - `components/ui/pricing-fields.tsx` — שדות תמחור (hourly rate / fixed price) לפי `pricing_type`
 
+**Utilities:**
+- `lib/utils.ts` — `formatDate(input: string): string` — פורמט תאריכים אחיד DD/MM/YYYY (קבל YYYY-MM-DD strings או ISO timestamps)
+
 **Layout & styles:**
 - `app/(app)/layout.tsx` — sidebar nav + main content wrapper; RTL כברירת מחדל
 - `app/layout.tsx` — root layout; `<html dir="rtl" lang="he">`

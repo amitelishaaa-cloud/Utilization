@@ -14,7 +14,7 @@ related: [[Data-Model]], [[Projects]], [[Retainers]], [[Pipeline]]
 - `app/(app)/clients/[id]/edit/page.tsx` — עריכת לקוח
 - `app/(app)/clients/actions.ts` — Server Actions: create, update, delete
 - `components/clients/client-form.tsx` — טופס לקוח
-- `components/clients/clients-table.tsx` — טבלת לקוחות
+- `components/clients/clients-table.tsx` — טבלת לקוחות; משתמש ב-`formatDate()` לפורמט `created_at` בפורמט DD/MM/YYYY
 
 ## Key types / exports
 

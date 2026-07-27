@@ -13,8 +13,8 @@ related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Cockpit]]
 - `app/(app)/retainers/new/page.tsx` — טופס רטיינר חדש
 - `app/(app)/retainers/[id]/edit/page.tsx` — עריכת רטיינר
 - `app/(app)/retainers/actions.ts` — Server Actions: create, update, delete
-- `components/retainers/retainer-form.tsx` — טופס רטיינר
-- `components/retainers/retainers-table.tsx` — טבלת רטיינרים עם סטטוס
+- `components/retainers/retainer-form.tsx` — טופס רטיינר; `useState` עוקב `startDate` לשם validation UI ללא end_date קודם ל-start_date
+- `components/retainers/retainers-table.tsx` — טבלת רטיינרים עם סטטוס; משתמש ב-`formatDate()` לפורמט start/end dates
 
 ## Key types / exports
 

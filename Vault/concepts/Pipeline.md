@@ -11,7 +11,7 @@ related: [[Data-Model]], [[Utilization-Engine]], [[Clients]], [[Projects]], [[Co
 ## Key files
 - `app/(app)/pipeline/page.tsx` — רשימת עסקאות
 - `app/(app)/pipeline/new/page.tsx` — טופס עסקה חדשה
-- `app/(app)/pipeline/[id]/page.tsx` — עמוד עסקה בודדת
+- `app/(app)/pipeline/[id]/page.tsx` — עמוד עסקה בודדת; משתמש ב-`formatDate()` לפורמט `expected_start_date`, `expected_end_date`, `closed_at`
 - `app/(app)/pipeline/[id]/edit/page.tsx` — עריכת עסקה
 - `app/(app)/pipeline/actions.ts` — Server Actions: create, update stage, close (won/lost)
 - `components/pipeline/deal-form.tsx` — טופס עסקה (שדות + validation)

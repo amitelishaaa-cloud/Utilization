@@ -13,8 +13,8 @@ related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Pipeline]], [[Co
 - `app/(app)/projects/new/page.tsx` — טופס פרויקט חדש
 - `app/(app)/projects/[id]/edit/page.tsx` — עריכת פרויקט
 - `app/(app)/projects/actions.ts` — Server Actions: create, update, delete
-- `components/projects/project-form.tsx` — טופס פרויקט (pricing fields, תאריכים)
-- `components/projects/projects-table.tsx` — טבלת פרויקטים עם סטטוס + לקוח
+- `components/projects/project-form.tsx` — טופס פרויקט (pricing fields, תאריכים); `useState` עוקב `startDate` לשם validation UI ללא end_date קודם ל-start_date
+- `components/projects/projects-table.tsx` — טבלת פרויקטים עם סטטוס + לקוח; משתמש ב-`formatDate()` לפורמט start/end dates
 
 ## Key types / exports
 
