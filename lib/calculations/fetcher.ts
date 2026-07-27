@@ -46,7 +46,7 @@ export async function fetchUtilization(
       .eq('user_id', userId)
       .eq('status', 'active')
       .lte('expected_start_date', endStr)
-      .gte('expected_end_date', startStr),
+      .or(`expected_end_date.is.null,expected_end_date.gte.${startStr}`),
     supabase
       .from('capacity_exceptions')
       .select('*')

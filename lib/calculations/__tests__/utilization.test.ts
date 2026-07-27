@@ -38,6 +38,8 @@ function makeDeal(overrides: Partial<PipelineDeal> = {}): PipelineDeal {
     user_id: 'user-1',
     client_id: null,
     name: 'Test Deal',
+    deal_type: 'project',
+    monthly_hours: null,
     pricing_type: 'hourly',
     estimated_hours: 40,
     hourly_rate: 100,
@@ -250,5 +252,80 @@ describe('calcWeeklyUtilization', () => {
 
     expect(result).toHaveLength(1)
     expect(result[0].committedHours).toBeCloseTo(43.3 / 4.33, 4) // ≈ 10 h/week
+  })
+
+  it('pipeline retainer deal (with end_date) contributes monthly_hours/4.33 × probability per active week', () => {
+    const input: UtilizationInput = {
+      defaultWeeklyHours: 40,
+      startDate: new Date('2026-08-03'),
+      endDate: new Date('2026-08-09'),
+      projects: [], allocations: [], retainers: [], capacityExceptions: [],
+      deals: [{
+        id: 'd1', user_id: 'u1', client_id: null, name: 'Retainer Deal',
+        deal_type: 'retainer',
+        monthly_hours: 86.6,   // 86.6/4.33 ≈ 20 שעות לשבוע
+        estimated_hours: null,
+        pricing_type: 'hourly', hourly_rate: 100, fixed_price: null,
+        expected_start_date: '2026-08-01',
+        expected_end_date: '2026-08-31',
+        current_stage: 'negotiation', // probability 0.55
+        probability_override: null,
+        status: 'active', created_at: '', closed_at: null,
+      }],
+    }
+    const result = calcWeeklyUtilization(input)
+    // 86.6 / 4.33 * 0.55 ≈ 11
+    expect(result[0].pipelineHours).toBeCloseTo(11, 1)
+    expect(result[0].committedHours).toBe(0)
+  })
+
+  it('pipeline retainer deal with no end_date contributes to every week until window end', () => {
+    const input: UtilizationInput = {
+      defaultWeeklyHours: 40,
+      startDate: new Date('2026-08-03'),
+      endDate: new Date('2026-08-16'),   // 2 שבועות
+      projects: [], allocations: [], retainers: [], capacityExceptions: [],
+      deals: [{
+        id: 'd1', user_id: 'u1', client_id: null, name: 'Open Retainer Deal',
+        deal_type: 'retainer',
+        monthly_hours: 43.3,  // 43.3/4.33 ≈ 10 שעות לשבוע
+        estimated_hours: null,
+        pricing_type: 'hourly', hourly_rate: 100, fixed_price: null,
+        expected_start_date: '2026-08-01',
+        expected_end_date: null,          // ריטיינר פתוח
+        current_stage: 'contract',        // probability 1.0
+        probability_override: null,
+        status: 'active', created_at: '', closed_at: null,
+      }],
+    }
+    const result = calcWeeklyUtilization(input)
+    expect(result).toHaveLength(2)
+    // שני השבועות צריכים לקבל ~10 שעות כל אחד
+    expect(result[0].pipelineHours).toBeCloseTo(10, 1)
+    expect(result[1].pipelineHours).toBeCloseTo(10, 1)
+  })
+
+  it('pipeline retainer deal does not contribute before expected_start_date', () => {
+    const input: UtilizationInput = {
+      defaultWeeklyHours: 40,
+      startDate: new Date('2026-08-03'),
+      endDate: new Date('2026-08-16'),
+      projects: [], allocations: [], retainers: [], capacityExceptions: [],
+      deals: [{
+        id: 'd1', user_id: 'u1', client_id: null, name: 'Future Retainer',
+        deal_type: 'retainer',
+        monthly_hours: 43.3,
+        estimated_hours: null,
+        pricing_type: 'hourly', hourly_rate: 100, fixed_price: null,
+        expected_start_date: '2026-08-10',  // מתחיל בשבוע השני
+        expected_end_date: null,
+        current_stage: 'contract',
+        probability_override: null,
+        status: 'active', created_at: '', closed_at: null,
+      }],
+    }
+    const result = calcWeeklyUtilization(input)
+    expect(result[0].pipelineHours).toBe(0)          // שבוע 1 — לפני התחלת הדיל
+    expect(result[1].pipelineHours).toBeCloseTo(10, 1) // שבוע 2 — תוך כדי
   })
 })
