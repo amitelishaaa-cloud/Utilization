@@ -1,5 +1,6 @@
 import { parseDate } from './utilization'
 import type { WeekBreakdown, RecommendationTag, RecommendationResult } from './types'
+import { UTILIZATION_LOW_THRESHOLD, UTILIZATION_HIGH_THRESHOLD, UTILIZATION_SUSTAINED_THRESHOLD, UTILIZATION_OVERLOAD_THRESHOLD } from './thresholds'
 
 type MonthBucket = { committed: number; pipeline: number; capacity: number }
 
@@ -44,7 +45,7 @@ export function calcRecommendation(weeks: WeekBreakdown[]): RecommendationResult
   // Pass 1: overload anywhere always takes priority — return earliest overloaded month
   for (let i = 0; i < months.length; i++) {
     const u = months[i].utilization
-    if (u > 1.10) {
+    if (u > UTILIZATION_OVERLOAD_THRESHOLD) {
       const idx = i + 1
       return makeResult('overload', 'red',
         `ניצול צפוי של ${pct(u)} בחודש ${idx} — הפרויקטים והעסקאות הקיימים עשויים לחרוג מהקיבולת`,
@@ -56,7 +57,7 @@ export function calcRecommendation(weeks: WeekBreakdown[]): RecommendationResult
   for (let i = 0; i < months.length; i++) {
     const u = months[i].utilization
     const idx = i + 1
-    if (u < 0.50) {
+    if (u < UTILIZATION_LOW_THRESHOLD) {
       if (i === 0) return makeResult('urgent_gap', 'dark_red',
         `ניצול צפוי של ${pct(u)} בחודש הקרוב — אין מספיק עבודה מאושרת או pipeline שמכסה את הקיבולת`,
         1, u)
@@ -67,7 +68,7 @@ export function calcRecommendation(weeks: WeekBreakdown[]): RecommendationResult
         `ניצול צפוי של ${pct(u)} בחודש ${idx} — ה-pipeline הנוכחי אינו מכסה את הקיבולת לאותה תקופה`,
         idx, u)
     }
-    if (u < 0.80) {
+    if (u < UTILIZATION_HIGH_THRESHOLD) {
       return makeResult('warning', 'yellow',
         `ניצול צפוי של ${pct(u)} בחודש ${idx} — הפרויקטים הקיימים אינם מכסים את הקיבולת המלאה`,
         idx, u)
@@ -75,7 +76,7 @@ export function calcRecommendation(weeks: WeekBreakdown[]): RecommendationResult
     // 0.80–1.10: optimal range, keep scanning
   }
 
-  const highCount = months.filter(m => m.utilization > 0.90).length
+  const highCount = months.filter(m => m.utilization > UTILIZATION_SUSTAINED_THRESHOLD).length
   if (highCount >= 2) {
     return makeResult('sustained_high', 'blue',
       'ניצול גבוה מתמשך — הפרויקטים הקיימים ממלאים את הקיבולת לאורך מספר חודשים',

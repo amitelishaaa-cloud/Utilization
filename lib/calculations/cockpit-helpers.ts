@@ -1,4 +1,5 @@
 import type { WeekBreakdown, RecommendationResult } from '@/lib/calculations/types'
+import { UTILIZATION_LOW_THRESHOLD, UTILIZATION_HIGH_THRESHOLD, UTILIZATION_OVERLOAD_THRESHOLD } from './thresholds'
 
 export type MonthSummary = {
   yearMonth: string    // "2026-07"
@@ -85,15 +86,15 @@ export function addMonths(date: Date, n: number): Date {
 }
 
 export function utilizationColorClass(utilization: number): string {
-  if (utilization > 1.1) return 'text-red-900'
-  if (utilization >= 0.8) return 'text-green-600'
-  if (utilization >= 0.5) return 'text-yellow-600'
+  if (utilization > UTILIZATION_OVERLOAD_THRESHOLD) return 'text-red-900'
+  if (utilization >= UTILIZATION_HIGH_THRESHOLD) return 'text-green-600'
+  if (utilization >= UTILIZATION_LOW_THRESHOLD) return 'text-yellow-600'
   return 'text-red-600'
 }
 
 export function utilizationBarColorClass(utilization: number): string {
-  if (utilization > 1.1) return 'bg-red-900'
-  if (utilization >= 0.8) return 'bg-green-500'
-  if (utilization >= 0.5) return 'bg-yellow-400'
+  if (utilization > UTILIZATION_OVERLOAD_THRESHOLD) return 'bg-red-900'
+  if (utilization >= UTILIZATION_HIGH_THRESHOLD) return 'bg-green-500'
+  if (utilization >= UTILIZATION_LOW_THRESHOLD) return 'bg-yellow-400'
   return 'bg-red-400'
 }
