@@ -44,7 +44,9 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 capacity(week)   = capacity_exceptions.available_hours OR users.default_weekly_hours
 committed(week)  = Σ project_weekly_allocations OR (estimated_hours / total_weeks)
                  + Σ retainer.monthly_hours / 4.33
-pipeline(week)   = Σ (deal.estimated_hours / deal_weeks) * stage_probability
+pipeline(week)   = Σ (deal.estimated_hours / deal_weeks) × stage_probability        # deal_type='project'
+                 + Σ (deal.monthly_hours / 4.33) × stage_probability                 # deal_type='retainer'
+                 # ריטיינר פתוח (no expected_end_date): תורם עד סוף חלון החישוב
 utilization      = (committed + pipeline) / capacity
 ```
 
