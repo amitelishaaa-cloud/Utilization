@@ -28,6 +28,7 @@ related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]]
 - `addMonths(date, n): Date` — מוסיף n חודשים (UTC)
 - `utilizationColorClass(u): string` — Tailwind text color class לפי %
 - `utilizationBarColorClass(u): string` — Tailwind bg color class לפי %
+- `utilizationColorClass` ו-`utilizationBarColorClass` מסתמכות על ספי ניצול מ-`lib/calculations/thresholds.ts` (ראה [[Utilization-Engine]])
 
 **`lib/calculations/fetcher.ts`**
 - `UtilizationFetchResult` — `{ weeks: WeekBreakdown[], recommendation: RecommendationResult, plan: 'free'|'pro' }`

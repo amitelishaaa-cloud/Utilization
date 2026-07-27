@@ -14,6 +14,7 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 - `lib/calculations/recommendations.ts` — לוגיקת המלצות rule-based
 - `lib/calculations/fetcher.ts` — שכבת ה-DB המחברת את המנוע לSupabase
 - `lib/pipeline-stages.ts` — הסתברויות ברירת מחדל לשלבים (ראה [[Data-Model]])
+- `lib/calculations/thresholds.ts` — ספי ניצול (single source of truth): `UTILIZATION_LOW_THRESHOLD` (0.5), `UTILIZATION_HIGH_THRESHOLD` (0.8), `UTILIZATION_SUSTAINED_THRESHOLD` (0.9), `UTILIZATION_OVERLOAD_THRESHOLD` (1.1)
 
 ## Key types / exports
 
@@ -58,6 +59,8 @@ utilization      = (committed + pipeline) / capacity
 | `warning` | 50%–80%, חודש ראשון שנמצא | yellow |
 | `sustained_high` | > 90% ב-2+ חודשים | blue |
 | `optimal` | כל השאר | green |
+
+> הספים המספריים מוגדרים ב-`lib/calculations/thresholds.ts` ומיובאים ל-`recommendations.ts` ו-`cockpit-helpers.ts`.
 
 ## Dependencies & consumers
 - תלוי ב: [[Data-Model]] (types), `lib/pipeline-stages.ts`
