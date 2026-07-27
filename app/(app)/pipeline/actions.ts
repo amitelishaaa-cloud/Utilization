@@ -45,6 +45,8 @@ function parseDealForm(formData: FormData) {
 
 function validateDeal(data: ReturnType<typeof parseDealForm>): string | null {
   if (!data.name) return 'שם העסקה הוא שדה חובה'
+  if (!data.deal_type || !(['project', 'retainer'] as const).includes(data.deal_type))
+    return 'יש לבחור סוג עסקה'
   if (!data.current_stage || !(data.current_stage in PIPELINE_STAGES))
     return 'יש לבחור שלב בצינור'
   if (!data.expected_start_date) return 'תאריך התחלה הוא שדה חובה'
