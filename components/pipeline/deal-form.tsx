@@ -30,6 +30,7 @@ interface DealFormProps {
 export default function DealForm({ action, clients, defaultValues, mode }: DealFormProps) {
   const [state, formAction, isPending] = useActionState(action, { error: null })
   const [dealType, setDealType] = useState<DealType>(defaultValues?.deal_type ?? 'project')
+  const [expectedStartDate, setExpectedStartDate] = useState(defaultValues?.expected_start_date ?? '')
 
   const defaultProbabilityPct =
     defaultValues?.probability_override != null
@@ -171,6 +172,7 @@ export default function DealForm({ action, clients, defaultValues, mode }: DealF
             defaultValue={defaultValues?.expected_start_date ?? ''}
             required
             className={INPUT_CLASS}
+            onChange={(e) => setExpectedStartDate(e.target.value)}
           />
         </FormField>
         <FormField
@@ -183,6 +185,7 @@ export default function DealForm({ action, clients, defaultValues, mode }: DealF
             defaultValue={defaultValues?.expected_end_date ?? ''}
             required={dealType === 'project'}
             className={INPUT_CLASS}
+            min={expectedStartDate || undefined}
           />
         </FormField>
       </div>
