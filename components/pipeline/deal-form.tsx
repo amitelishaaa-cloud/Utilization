@@ -1,10 +1,10 @@
 'use client'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import FormField from '@/components/ui/form-field'
 import PricingFields from '@/components/ui/pricing-fields'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
-import type { Client, PipelineDeal } from '@/lib/types'
+import type { Client, DealType, PipelineDeal } from '@/lib/types'
 
 const INPUT_CLASS =
   'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent'
@@ -29,8 +29,8 @@ interface DealFormProps {
 
 export default function DealForm({ action, clients, defaultValues, mode }: DealFormProps) {
   const [state, formAction, isPending] = useActionState(action, { error: null })
+  const [dealType, setDealType] = useState<DealType>(defaultValues?.deal_type ?? 'project')
 
-  // probability_override is stored 0–1 in DB; display as 0–100 to the user
   const defaultProbabilityPct =
     defaultValues?.probability_override != null
       ? Math.round(defaultValues.probability_override * 100)
@@ -101,6 +101,31 @@ export default function DealForm({ action, clients, defaultValues, mode }: DealF
         </FormField>
       </div>
 
+      {/* סוג עסקה — radio buttons, כדפוס PricingFields */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          סוג עסקה <span className="text-red-500">*</span>
+        </label>
+        <div className="flex gap-6">
+          {([
+            { value: 'project', label: 'פרויקט' },
+            { value: 'retainer', label: 'ריטיינר' },
+          ] as { value: DealType; label: string }[]).map((opt) => (
+            <label key={opt.value} className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="radio"
+                name="deal_type"
+                value={opt.value}
+                checked={dealType === opt.value}
+                onChange={() => setDealType(opt.value)}
+                className="accent-gray-900"
+              />
+              {opt.label}
+            </label>
+          ))}
+        </div>
+      </div>
+
       <PricingFields
         fixedOptionValue="fixed"
         fixedOptionLabel="מחיר קבוע"
@@ -111,17 +136,32 @@ export default function DealForm({ action, clients, defaultValues, mode }: DealF
         defaultFixedValue={defaultValues?.fixed_price}
       />
 
-      <FormField label="שעות מוערכות" required>
-        <input
-          type="number"
-          name="estimated_hours"
-          min="0.5"
-          step="0.5"
-          defaultValue={defaultValues?.estimated_hours ?? ''}
-          required
-          className={INPUT_CLASS}
-        />
-      </FormField>
+      {/* שעות — unmount מלא של branch לא פעיל כדי ש-required לא יחסום */}
+      {dealType === 'project' ? (
+        <FormField label="שעות מוערכות" required>
+          <input
+            type="number"
+            name="estimated_hours"
+            min="0.5"
+            step="0.5"
+            defaultValue={defaultValues?.estimated_hours ?? ''}
+            required
+            className={INPUT_CLASS}
+          />
+        </FormField>
+      ) : (
+        <FormField label="שעות חודשיות" required>
+          <input
+            type="number"
+            name="monthly_hours"
+            min="0.5"
+            step="0.5"
+            defaultValue={defaultValues?.monthly_hours ?? ''}
+            required
+            className={INPUT_CLASS}
+          />
+        </FormField>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <FormField label="תאריך התחלה צפוי" required>
@@ -133,12 +173,15 @@ export default function DealForm({ action, clients, defaultValues, mode }: DealF
             className={INPUT_CLASS}
           />
         </FormField>
-        <FormField label="תאריך סיום צפוי" required>
+        <FormField
+          label={dealType === 'retainer' ? 'תאריך סיום צפוי (אופציונלי)' : 'תאריך סיום צפוי'}
+          required={dealType === 'project'}
+        >
           <input
             type="date"
             name="expected_end_date"
             defaultValue={defaultValues?.expected_end_date ?? ''}
-            required
+            required={dealType === 'project'}
             className={INPUT_CLASS}
           />
         </FormField>
