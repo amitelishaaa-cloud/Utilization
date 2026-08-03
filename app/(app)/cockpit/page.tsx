@@ -43,7 +43,7 @@ export default async function CockpitPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">לוח בקרה</h1>
-        <p className="text-sm text-gray-500 mt-1">תחזית ניצול ל-3 חודשים</p>
+        <p className="text-sm text-gray-500 mt-1">תחזית ניצול ל-4 החודשים הקרובים</p>
       </div>
 
       {!hasData ? (
