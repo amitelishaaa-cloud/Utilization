@@ -41,11 +41,11 @@ There is no lint script configured. TypeScript errors surface during `npm run bu
 
 ## סטטוס נוכחי
 
-DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, גרף 3 חודשים, בלוק המלצה, blur gate ל-free tier). auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל. "עסקה שנסגרת → פרויקט/ריטיינר" - הושלם (`realizeDealAction` + `RealizeDealModal`, ראה `Vault/concepts/Pipeline.md`).
+DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, הכנסה צפויה לחודש, גרף 3 חודשים, בלוק המלצה, blur gate ל-free tier). auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל. "עסקה שנסגרת → פרויקט/ריטיינר" - הושלם (`realizeDealAction` + `RealizeDealModal`, ראה `Vault/concepts/Pipeline.md`).
 
 ## נקודות פתוחות שחשוב לזכור
 
-- כפילות ספי צבע (50%/80%/110%) בין `lib/calculations/cockpit-helpers.ts` ל-`recommendations.ts` - טרם אוחדה למקור אמת אחד. אל תניח סנכרון בין השניים אם תיגע באחד מהם.
+- **חישוב ההכנסה מבודד ממנוע הניצול בכוונה**: `lib/calculations/revenue.ts` מייבא מ-`utilization.ts` עוזרי תאריכים טהורים בלבד, ו-`fetchMonthlyRevenue` היא שליפה נפרדת לגמרי מ-`fetchUtilization`. שני המספרים בקוקפיט מסתכלים על **חלונות זמן שונים** (ניצול: מהשבוע הנוכחי 3 חודשים קדימה; הכנסה: החודש הקלנדרי המלא) - זו החלטה, לא באג. אל תאחד אותם ואל תזין ערכי הכנסה חזרה למנוע או להמלצות.
 - **`notes`/`priority`/`reminder_date` פרוסים באופן א-סימטרי בכוונה**: `projects` ו-`pipeline_deals` מקבלות את שלושתם, `retainers` מקבלת `notes` **בלבד**. אל תוסיף `priority`/`reminder_date` ל-insert של retainers - אין להן עמודה. `priority` הוא סולם 1-5 ש-**5 = הגבוה ביותר**, ומידע/סינון בלבד: אסור שייכנס למנוע החישוב או להמלצות (מעוגן בטסט ב-`utilization.test.ts`).
 - **`reminder_date` הוא עמודה ו-input בלבד** - אין cron, אין שליחה, אין התראות. אל תניח שקיים מנגנון תזכורות.
 - **איפוס סיסמה לא ממומש**. `/forgot-password` הוא עמוד סטטי בלבד ("פנה למנהל המערכת") - אין `resetPasswordForEmail` ואין SMTP. הוחלט מודע בזמן שיש משתמש אחד.
@@ -65,6 +65,7 @@ DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CR
 | `app/(auth)/`, `proxy.ts`, `lib/auth/`, `components/auth/` | `Vault/concepts/Auth.md` |
 | `lib/calculations/utilization.ts`, `recommendations.ts`, `types.ts` | `Vault/concepts/Utilization-Engine.md` |
 | `lib/calculations/cockpit-helpers.ts`, `lib/calculations/fetcher.ts`, `app/(app)/cockpit/` | `Vault/concepts/Cockpit.md` |
+| `lib/calculations/revenue.ts`, `revenue-fetcher.ts`, `components/cockpit/revenue-metric.tsx` | `Vault/concepts/Revenue-Forecast.md` |
 | `lib/pipeline-stages.ts`, `app/(app)/pipeline/`, `components/pipeline/` | `Vault/concepts/Pipeline.md` |
 | `app/(app)/projects/`, `components/projects/` | `Vault/concepts/Projects.md` |
 | `app/(app)/retainers/`, `components/retainers/` | `Vault/concepts/Retainers.md` |

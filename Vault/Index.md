@@ -13,7 +13,8 @@ tags: [index, navigation]
 | מושג | תיאור |
 |------|--------|
 | [[Utilization-Engine]] | מנוע החישוב הטהור — `calcWeeklyUtilization`, `calcRecommendation` |
-| [[Cockpit]] | מסך ראשי — hero metric, עמודות תחזית, המלצה |
+| [[Revenue-Forecast]] | הכנסה צפויה לחודש הקלנדרי — `calcMonthlyRevenue`, מבודד מהמנוע |
+| [[Cockpit]] | מסך ראשי — hero metric, הכנסה צפויה, עמודות תחזית, המלצה |
 | [[Pipeline]] | עסקאות בתהליך, משוקללות לפי הסתברות שלב |
 | [[Projects]] | פרויקטים מחויבים (one-time) |
 | [[Retainers]] | התקשרויות חוזרות חודשיות |

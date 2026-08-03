@@ -1,4 +1,5 @@
 import { fetchUtilization } from '@/lib/calculations/fetcher'
+import { fetchMonthlyRevenue } from '@/lib/calculations/revenue-fetcher'
 import { requireUser } from '@/lib/supabase/server'
 import {
   getStartOfCurrentWeek,
@@ -10,6 +11,7 @@ import { HeroMetric } from '@/components/cockpit/hero-metric'
 import { ForecastColumns } from '@/components/cockpit/forecast-columns'
 import { RecommendationBlock } from '@/components/cockpit/recommendation-block'
 import { ForecastBlurGate } from '@/components/cockpit/forecast-blur-gate'
+import { RevenueMetric } from '@/components/cockpit/revenue-metric'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,11 +31,12 @@ export default async function CockpitPage() {
   const startDate = getStartOfCurrentWeek()
   const endDate = addMonths(startDate, 3)
 
-  const { weeks, recommendation, plan } = await fetchUtilization(
-    userId,
-    startDate,
-    endDate,
-  )
+  // שני חלונות זמן שונים במכוון: הניצול מהשבוע הנוכחי ו-3 חודשים קדימה,
+  // ההכנסה על החודש הקלנדרי המלא. fetchMonthlyRevenue עצמאית לחלוטין.
+  const [{ weeks, recommendation, plan }, revenue] = await Promise.all([
+    fetchUtilization(userId, startDate, endDate),
+    fetchMonthlyRevenue(userId),
+  ])
 
   const hasData = weeks.some(w => w.committedHours + w.pipelineHours > 0)
   const heroMonth = getHeroMonth(weeks)
@@ -50,7 +53,10 @@ export default async function CockpitPage() {
         <EmptyState />
       ) : (
         <>
-          <HeroMetric heroMonth={heroMonth} />
+          <HeroMetric
+            heroMonth={heroMonth}
+            revenue={<RevenueMetric revenue={revenue} plan={plan} />}
+          />
           <ForecastBlurGate plan={plan}>
             <ForecastColumns months={months} />
             <RecommendationBlock recommendation={recommendation} />

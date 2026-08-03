@@ -1,6 +1,6 @@
 ---
 tags: [ui, page, cockpit, dashboard]
-related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]], [[Projects]], [[Retainers]]
+related: [[Utilization-Engine]], [[Revenue-Forecast]], [[Data-Model]], [[UI-Components]], [[Pipeline]], [[Projects]], [[Retainers]]
 ---
 
 # Cockpit
@@ -12,7 +12,9 @@ related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]]
 - `app/(app)/cockpit/page.tsx` — Server Component; קורא `fetchUtilization`, מחלק לcomponents
 - `lib/calculations/fetcher.ts` — `fetchUtilization()`: DB → engine → `{ weeks, recommendation, plan }`
 - `lib/calculations/cockpit-helpers.ts` — utilities לעיבוד output המנוע ל-UI
-- `components/cockpit/hero-metric.tsx` — מציג את ה-% הגדול + תווית חודש
+- `lib/calculations/revenue-fetcher.ts` — `fetchMonthlyRevenue()`: שליפה עצמאית → `MonthRevenue` (ראה [[Revenue-Forecast]])
+- `components/cockpit/hero-metric.tsx` — מציג את ה-% הגדול + תווית חודש; prop `revenue?: ReactNode` מוסיף עמודה נלווית
+- `components/cockpit/revenue-metric.tsx` — הכנסה צפויה לחודש הקלנדרי + בלור free tier inline
 - `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות); תאריכי שבועות מעוצבים דרך `formatDate()` (DD/MM/YYYY)
 - `components/cockpit/recommendation-block.tsx` — תג צבעוני + טקסט המלצה
 - `components/cockpit/forecast-blur-gate.tsx` — עוטף עמודות+המלצה; blur לfree + CTA
@@ -38,23 +40,32 @@ related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]]
 
 ```
 CockpitPage (Server)
-  → fetchUtilization(userId, startDate, endDate)        // fetcher.ts
-      → Supabase: users, projects, retainers, deals,
-                  capacity_exceptions, allocations
-      → calcWeeklyUtilization(input)                    // utilization.ts
-      → calcRecommendation(weeks)                       // recommendations.ts
-      → return { weeks, recommendation, plan }
+  → Promise.all([
+      fetchUtilization(userId, startDate, endDate)      // fetcher.ts
+        → Supabase: users, projects, retainers, deals,
+                    capacity_exceptions, allocations
+        → calcWeeklyUtilization(input)                  // utilization.ts
+        → calcRecommendation(weeks)                     // recommendations.ts
+        → return { weeks, recommendation, plan },
+      fetchMonthlyRevenue(userId)                       // revenue-fetcher.ts — עצמאית
+        → Supabase: projects, retainers, deals, allocations
+        → calcMonthlyRevenue(input)                     // revenue.ts
+        → return MonthRevenue,
+    ])
   → getHeroMonth(weeks)                                 // cockpit-helpers.ts
   → groupWeeksByMonth(weeks)                            // cockpit-helpers.ts
-  → <HeroMetric heroMonth={...} />
+  → <HeroMetric heroMonth={...}
+      revenue={<RevenueMetric revenue={...} plan={plan} />} />
   → <ForecastBlurGate plan={plan}>
       <ForecastColumns months={...} />
       <RecommendationBlock recommendation={...} />
     </ForecastBlurGate>
 ```
 
+> שני החלונות שונים במכוון: הניצול מהשבוע הנוכחי ו-3 חודשים קדימה, ההכנסה על החודש הקלנדרי המלא. ראה [[Revenue-Forecast]].
+
 ## Free-tier gate
-`users.plan === 'free'` → `ForecastBlurGate` מציג blur CSS על הילדים + CTA "שדרג לפרו לראות את התחזית המלאה"
+`users.plan === 'free'` → `ForecastBlurGate` מציג blur CSS על הילדים + CTA "שדרג לפרו לראות את התחזית המלאה". `RevenueMetric` מיישם בלור inline משלו (בלי CTA כפול) — ראה [[Revenue-Forecast]].
 
 ## Dependencies & consumers
 - תלוי ב: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]]
