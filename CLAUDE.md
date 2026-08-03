@@ -16,28 +16,54 @@ npm run start    # serve the production build
 
 There is no lint script configured. TypeScript errors surface during `npm run build`.
 
-## Important: This is Next.js 16 — read before writing code
+## Next.js 16 + Architecture
 
-Next.js 16 has breaking changes from earlier versions. Before writing any code, read the relevant guide in `node_modules/next/dist/docs/`. Key differences:
+כשכותבים קוד ב-`app/`, `components/`, או `lib/` — השתמש ב-Skill `nextjs16-guide` לפני הכתיבה. הוא מכיל את ה-breaking changes, מודל ה-rendering, ודפוסי Supabase.
 
-- **Turbopack** is the default bundler (not Webpack). Use `--webpack` flag to opt out.
-- **`fetch` is not cached by default.** Use the `use cache` directive to cache results, or wrap in `<Suspense>` to stream. Old fetch cache options (`next: { revalidate }` on the fetch call) belong to the previous model — see `node_modules/next/dist/docs/01-app/02-guides/caching-without-cache-components.md` if you need them.
-- **`params` is now a Promise.** Dynamic route params must be awaited: `const { id } = await params`.
-- **`next build` no longer runs ESLint** automatically.
-- **Cache Components** (opt-in via `cacheComponents: true` in `next.config.ts`) enable the new `use cache` directive model.
+---
 
-## Architecture
+## תיאור עסקי
 
-**Routing** uses the App Router (`app/` directory). No `src/` directory. Import alias `@/*` resolves to the project root.
+מרכז בקרת ניצול (utilization) לפרילנסרים עצמאים - נותן תמונת מצב של רמת התעסוקה שלהם, כולל תחזית קדימה (לא רק רטרוספקטיבה: קיבולת + פרויקטים מאושרים + pipeline משוקלל לפי הסתברות שלב). מתריע מתי צריך להאיץ שיווק, להאט, או להעלות מחירים - לפני שכבר מאוחר מדי.
 
-**Rendering model**: layouts and pages are Server Components by default. Add `'use client'` only at the boundary where browser APIs, state, or event handlers are needed — not to every component in the subtree.
+## מוסכמת שפה (חשוב מאוד - אל תסטה ממנה)
 
-**Data fetching in Server Components** — call Supabase (or any async I/O) directly in async Server Components or Route Handlers. Supabase credentials stay server-side; only `NEXT_PUBLIC_` env vars reach the client.
+כל פרומפט שנכתב עבורך (Claude Code), כל הסבר, סיכום PR, ותרחיש בדיקה - חייבים להיות בעברית בלבד. שמות שדות/פונקציות/paths טכניים נשארים באנגלית בתוך הטקסט העברי (זו זהות הקוד, לא תרגום). קוד וקומיטים - נשארים באנגלית כרגיל.
 
-**Data mutations** use Server Functions with the `'use server'` directive. Always verify auth inside every Server Function — they are reachable via direct POST requests.
+## החלטות ארכיטקטורה ייחודיות לפרויקט
 
-**Route Handlers** live at `app/api/**/route.ts`. They support GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS. GET handlers are not cached by default.
+- **דפוס RLS ללא auth בשלב הפיתוח**: משתמשים ב-Service Role Key (server-only, ב-`lib/supabase/server.ts`) שעוקף RLS, יחד עם `DEV_USER_ID` קבוע מ-`.env.local` שנזרם ל-`user_id` בכל Server Action/Function. כשיתווסף auth אמיתי - שורה אחת תוחלף (`process.env.DEV_USER_ID` → `auth.uid()`).
+- **טסטים**: לוגיקה טהורה (בלי DB) - כמו מנוע החישוב וההמלצות - תמיד נבדקת ב-Vitest unit tests, לא במסכים זמניים.
+- **שפת ההמלצות שיוצאת למשתמש**: "תצפית מצב", לא פקודה (למשל "הניצול צפוי לרדת מתחת ל-X" ולא "העלה מחירים עכשיו").
+- **Tailwind classes**: תמיד strings סטטיים (lookup objects למיפוי צבע) - לא בניית class דינמית.
+- RTL כבר מוגדר ב-root `<html dir="rtl">` - אין צורך ב-`dir` overrides ברכיבים.
 
-**Supabase** (`@supabase/supabase-js` ^2.110.8) is installed. Convention: create a client factory in `lib/supabase/` — a server client (using service role key, server-only) and a browser client (using `NEXT_PUBLIC_SUPABASE_ANON_KEY`).
+## סטטוס נוכחי
 
-**Tailwind CSS 4** — configured via PostCSS (`postcss.config.mjs` with `@tailwindcss/postcss`). There is no `tailwind.config.js`; customization goes in `app/globals.css` using CSS `@theme` blocks.
+DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, גרף 3 חודשים, בלוק המלצה, blur gate ל-free tier). auth אמיתי - עדיין לא התחיל, מתוכנן בסוף.
+
+## נקודות פתוחות שחשוב לזכור
+
+- כפילות ספי צבע (50%/80%/110%) בין `lib/calculations/cockpit-helpers.ts` ל-`recommendations.ts` - טרם אוחדה למקור אמת אחד. אל תניח סנכרון בין השניים אם תיגע באחד מהם.
+- `source_deal_id` בטבלת `projects` קיים בסכמה אך לא בשימוש - "עסקה שנסגרת → פרויקט" נדחה במפורש, לא נקבע מתי ייבנה.
+
+## תיעוד מורחב (Vault)
+
+תחת Vault/ נמצא תיעוד ממוקד לפי נושא, בפורמט Obsidian. אל תסתמך על ידע כללי — Vault הוא מקור האמת המעודכן.
+
+**מתי לדלג על Vault לחלוטין:** שאלות על framework/syntax/TypeScript, debugging של שגיאת קומפייל, שינויי config/tooling, או כל משימה שלא נוגעת ב-business logic של הפרויקט.
+
+**ניתוב ישיר** — קרא ישירות את ה-note הרלוונטי, ללא קריאת Index.md תחילה:
+
+| קובץ/תיקייה | Note לקרוא |
+|-------------|------------|
+| `lib/types.ts`, `lib/supabase/` | `Vault/concepts/Data-Model.md` |
+| `lib/calculations/utilization.ts`, `recommendations.ts`, `types.ts` | `Vault/concepts/Utilization-Engine.md` |
+| `lib/calculations/cockpit-helpers.ts`, `lib/calculations/fetcher.ts`, `app/(app)/cockpit/` | `Vault/concepts/Cockpit.md` |
+| `lib/pipeline-stages.ts`, `app/(app)/pipeline/`, `components/pipeline/` | `Vault/concepts/Pipeline.md` |
+| `app/(app)/projects/`, `components/projects/` | `Vault/concepts/Projects.md` |
+| `app/(app)/retainers/`, `components/retainers/` | `Vault/concepts/Retainers.md` |
+| `app/(app)/clients/`, `components/clients/` | `Vault/concepts/Clients.md` |
+| `app/globals.css`, `components/ui/` | `Vault/concepts/UI-Components.md` |
+
+קרא `Vault/Index.md` רק כשהמשימה לא ממפה בבירור לשורה בטבלה. אם המשימה חוצה תחומים — קרא 2-3 notes לכל היותר.

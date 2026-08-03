@@ -14,6 +14,7 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 - `lib/calculations/recommendations.ts` — לוגיקת המלצות rule-based
 - `lib/calculations/fetcher.ts` — שכבת ה-DB המחברת את המנוע לSupabase
 - `lib/pipeline-stages.ts` — הסתברויות ברירת מחדל לשלבים (ראה [[Data-Model]])
+- `lib/calculations/thresholds.ts` — ספי ניצול (single source of truth): `UTILIZATION_LOW_THRESHOLD` (0.5), `UTILIZATION_HIGH_THRESHOLD` (0.8), `UTILIZATION_SUSTAINED_THRESHOLD` (0.9), `UTILIZATION_OVERLOAD_THRESHOLD` (1.1)
 
 ## Key types / exports
 
@@ -43,7 +44,9 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 capacity(week)   = capacity_exceptions.available_hours OR users.default_weekly_hours
 committed(week)  = Σ project_weekly_allocations OR (estimated_hours / total_weeks)
                  + Σ retainer.monthly_hours / 4.33
-pipeline(week)   = Σ (deal.estimated_hours / deal_weeks) * stage_probability
+pipeline(week)   = Σ (deal.estimated_hours / deal_weeks) × stage_probability        # deal_type='project'
+                 + Σ (deal.monthly_hours / 4.33) × stage_probability                 # deal_type='retainer'
+                 # ריטיינר פתוח (no expected_end_date): תורם עד סוף חלון החישוב
 utilization      = (committed + pipeline) / capacity
 ```
 
@@ -58,6 +61,8 @@ utilization      = (committed + pipeline) / capacity
 | `warning` | 50%–80%, חודש ראשון שנמצא | yellow |
 | `sustained_high` | > 90% ב-2+ חודשים | blue |
 | `optimal` | כל השאר | green |
+
+> הספים המספריים מוגדרים ב-`lib/calculations/thresholds.ts` ומיובאים ל-`recommendations.ts` ו-`cockpit-helpers.ts`.
 
 ## Dependencies & consumers
 - תלוי ב: [[Data-Model]] (types), `lib/pipeline-stages.ts`

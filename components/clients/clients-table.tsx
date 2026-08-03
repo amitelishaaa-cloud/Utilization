@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 import { deleteClientAction } from '@/app/(app)/clients/actions'
+import { formatDate } from '@/lib/utils'
 import type { Client } from '@/lib/types'
 
 export default function ClientsTable({ clients }: { clients: Client[] }) {
@@ -55,7 +56,7 @@ function ClientRow({ client }: { client: Client }) {
       <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
         <td className="px-4 py-3 text-sm font-medium text-gray-900">{client.name}</td>
         <td className="px-4 py-3 text-sm text-gray-500">
-          {new Date(client.created_at).toLocaleDateString('he-IL')}
+          {formatDate(client.created_at)}
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2 justify-end">

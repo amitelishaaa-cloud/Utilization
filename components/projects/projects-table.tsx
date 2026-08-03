@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 import { deleteProjectAction } from '@/app/(app)/projects/actions'
+import { formatDate } from '@/lib/utils'
 import type { Project, ProjectStatus } from '@/lib/types'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
@@ -70,7 +71,7 @@ function ProjectRow({ project }: { project: Project }) {
       ? `₪${project.hourly_rate}/ש'`
       : `₪${project.fixed_price} קבוע`
 
-  const dateLabel = `${project.start_date} – ${project.end_date}${project.is_end_date_estimated ? ' (משוער)' : ''}`
+  const dateLabel = `${formatDate(project.start_date)} – ${formatDate(project.end_date)}${project.is_end_date_estimated ? ' (משוער)' : ''}`
 
   return (
     <>

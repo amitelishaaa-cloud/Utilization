@@ -1,17 +1,20 @@
 export type PipelineStage = 'inquiry' | 'proposal' | 'negotiation' | 'verbal_close' | 'contract'
 export type DealStatus = 'active' | 'won' | 'lost'
+export type DealType = 'project' | 'retainer'
 
 export type PipelineDeal = {
   id: string
   user_id: string
   client_id: string | null
   name: string
+  deal_type: DealType
   pricing_type: PricingType
-  estimated_hours: number
+  estimated_hours: number | null
+  monthly_hours: number | null
   hourly_rate: number | null
   fixed_price: number | null
   expected_start_date: string
-  expected_end_date: string
+  expected_end_date: string | null
   current_stage: PipelineStage
   probability_override: number | null
   status: DealStatus
@@ -55,6 +58,8 @@ export type Project = {
   end_date: string
   is_end_date_estimated: boolean
   status: ProjectStatus
+  notes: string | null
+  priority: 'low' | 'medium' | 'high' | null
   created_at: string
   clients?: { name: string } | null
 }

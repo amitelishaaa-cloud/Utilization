@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { createServerClient, getDevUserId } from '@/lib/supabase/server'
 import StageHistoryTimeline from '@/components/pipeline/stage-history-timeline'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
+import { formatDate } from '@/lib/utils'
 import type { PipelineStage, DealStatus } from '@/lib/types'
 
 const STATUS_LABELS: Record<DealStatus, string> = {
@@ -101,14 +102,14 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             <div className="flex justify-between">
               <span className="text-gray-500">תאריכים</span>
               <span className="font-medium text-gray-900">
-                {deal.expected_start_date} – {deal.expected_end_date}
+                {formatDate(deal.expected_start_date)} – {formatDate(deal.expected_end_date)}
               </span>
             </div>
             {deal.closed_at && (
               <div className="flex justify-between">
                 <span className="text-gray-500">נסגר ב</span>
                 <span className="font-medium text-gray-900">
-                  {new Date(deal.closed_at).toLocaleDateString('he-IL')}
+                  {formatDate(deal.closed_at)}
                 </span>
               </div>
             )}

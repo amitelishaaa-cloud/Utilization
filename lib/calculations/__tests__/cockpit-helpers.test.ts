@@ -8,7 +8,7 @@ import {
   utilizationColorClass,
   utilizationBarColorClass,
 } from '@/lib/calculations/cockpit-helpers'
-import type { WeekBreakdown, RecommendationResult } from '@/lib/calculations/types'
+import type { WeekBreakdown } from '@/lib/calculations/types'
 
 // ── groupWeeksByMonth ────────────────────────────────────────────────────────
 
@@ -68,38 +68,54 @@ describe('getHeroMonth', () => {
     { weekStart: '2026-08-03', committedHours: 12, pipelineHours: 0, capacity: 40, utilization: 0.30 },
     { weekStart: '2026-08-10', committedHours: 12, pipelineHours: 0, capacity: 40, utilization: 0.30 },
   ]
-  const allWeeks = [...julyWeeks, ...augWeeks]
+  const augOverloadWeeks: WeekBreakdown[] = [
+    { weekStart: '2026-08-03', committedHours: 48, pipelineHours: 0, capacity: 40, utilization: 1.2 },
+    { weekStart: '2026-08-10', committedHours: 48, pipelineHours: 0, capacity: 40, utilization: 1.2 },
+  ]
+  const today = new Date(2026, 6, 15) // July 15, 2026 local time (month is 0-indexed)
 
-  it('uses affectedMonthIndex=2 when recommendation points to month 2', () => {
-    const rec: RecommendationResult = {
-      tag: 'mid_gap', color: 'orange', text: '',
-      affectedMonthIndex: 2, affectedMonthUtilization: 0.30,
-    }
-    const hero = getHeroMonth(allWeeks, rec)
-    expect(hero.monthIndex).toBe(2)
-    expect(hero.utilization).toBeCloseTo(0.30, 4)
-    expect(hero.monthLabel).toBe('אוגוסט 2026')
-  })
-
-  it('falls back to month 1 when affectedMonthIndex is null (optimal)', () => {
-    const rec: RecommendationResult = {
-      tag: 'optimal', color: 'green', text: '',
-      affectedMonthIndex: null, affectedMonthUtilization: null,
-    }
-    const hero = getHeroMonth(allWeeks, rec)
+  it('returns current calendar month utilization', () => {
+    const hero = getHeroMonth([...julyWeeks, ...augWeeks], today)
     expect(hero.monthIndex).toBe(1)
     expect(hero.utilization).toBeCloseTo(0.85, 4)
     expect(hero.monthLabel).toBe('יולי 2026')
   })
 
-  it('returns 0% utilization when weeks is empty and affectedMonthIndex is null', () => {
-    const rec: RecommendationResult = {
-      tag: 'optimal', color: 'green', text: '',
-      affectedMonthIndex: null, affectedMonthUtilization: null,
-    }
-    const hero = getHeroMonth([], rec)
+  it('does not include nextMonthOverload when next month is below overload threshold', () => {
+    const hero = getHeroMonth([...julyWeeks, ...augWeeks], today)
+    expect(hero.nextMonthOverload).toBeUndefined()
+  })
+
+  it('includes nextMonthOverload when next month exceeds overload threshold', () => {
+    const hero = getHeroMonth([...julyWeeks, ...augOverloadWeeks], today)
+    expect(hero.nextMonthOverload).toBeDefined()
+    expect(hero.nextMonthOverload?.monthIndex).toBe(2)
+    expect(hero.nextMonthOverload?.utilization).toBeCloseTo(1.2, 4)
+    expect(hero.nextMonthOverload?.monthLabel).toBe('אוגוסט 2026')
+  })
+
+  it('does not include nextMonthOverload when next month is exactly at overload threshold (not strictly above)', () => {
+    // 44/40 = 1.1 exactly — not > 1.1, so no overload
+    const atThresholdWeeks: WeekBreakdown[] = [
+      { weekStart: '2026-08-03', committedHours: 44, pipelineHours: 0, capacity: 40, utilization: 1.1 },
+    ]
+    const hero = getHeroMonth([...julyWeeks, ...atThresholdWeeks], today)
+    expect(hero.nextMonthOverload).toBeUndefined()
+  })
+
+  it('returns 0% with correct label when current month is not in weeks', () => {
+    const sep = new Date(2026, 8, 15) // September 15, 2026 local time
+    const hero = getHeroMonth([...julyWeeks, ...augWeeks], sep)
     expect(hero.utilization).toBe(0)
-    expect(hero.monthIndex).toBe(1)
+    expect(hero.monthLabel).toBe('ספטמבר 2026')
+    expect(hero.nextMonthOverload).toBeUndefined()
+  })
+
+  it('returns 0% when weeks is empty', () => {
+    const hero = getHeroMonth([], today)
+    expect(hero.utilization).toBe(0)
+    expect(hero.monthLabel).toBe('יולי 2026')
+    expect(hero.nextMonthOverload).toBeUndefined()
   })
 })
 

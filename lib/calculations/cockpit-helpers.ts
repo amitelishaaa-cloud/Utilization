@@ -1,4 +1,5 @@
-import type { WeekBreakdown, RecommendationResult } from '@/lib/calculations/types'
+import type { WeekBreakdown } from '@/lib/calculations/types'
+import { UTILIZATION_LOW_THRESHOLD, UTILIZATION_HIGH_THRESHOLD, UTILIZATION_OVERLOAD_THRESHOLD } from './thresholds'
 
 export type MonthSummary = {
   yearMonth: string    // "2026-07"
@@ -12,6 +13,11 @@ export type HeroMonth = {
   monthIndex: number
   monthLabel: string
   utilization: number
+  nextMonthOverload?: {
+    monthIndex: number
+    monthLabel: string
+    utilization: number
+  }
 }
 
 const HEBREW_MONTHS = [
@@ -44,29 +50,34 @@ export function groupWeeksByMonth(weeks: WeekBreakdown[]): MonthSummary[] {
   })
 }
 
-export function getHeroMonth(
-  weeks: WeekBreakdown[],
-  recommendation: RecommendationResult,
-): HeroMonth {
+export function getHeroMonth(weeks: WeekBreakdown[], today: Date = new Date()): HeroMonth {
   const months = groupWeeksByMonth(weeks)
-  if (
-    recommendation.affectedMonthIndex !== null &&
-    recommendation.affectedMonthUtilization !== null
-  ) {
-    const month = months[recommendation.affectedMonthIndex - 1]
-    return {
-      monthIndex: recommendation.affectedMonthIndex,
-      utilization: recommendation.affectedMonthUtilization,
-      monthLabel: month?.monthLabel ?? `חודש ${recommendation.affectedMonthIndex}`,
+
+  const year = today.getFullYear()
+  const month = today.getMonth() // 0-indexed
+  const currentYearMonth = `${year}-${String(month + 1).padStart(2, '0')}`
+  // Use local Date constructor to avoid UTC/local mismatch when crossing year boundaries
+  const nextMonthLocal = new Date(year, month + 1, 1)
+  const nextYearMonth = `${nextMonthLocal.getFullYear()}-${String(nextMonthLocal.getMonth() + 1).padStart(2, '0')}`
+
+  const currentMonth = months.find(m => m.yearMonth === currentYearMonth)
+  const nextMonth = months.find(m => m.yearMonth === nextYearMonth)
+
+  const result: HeroMonth = {
+    monthIndex: currentMonth?.monthIndex ?? 0,
+    monthLabel: currentMonth?.monthLabel ?? formatMonthLabel(currentYearMonth),
+    utilization: currentMonth?.utilization ?? 0,
+  }
+
+  if (nextMonth && nextMonth.utilization > UTILIZATION_OVERLOAD_THRESHOLD) {
+    result.nextMonthOverload = {
+      monthIndex: nextMonth.monthIndex,
+      monthLabel: nextMonth.monthLabel,
+      utilization: nextMonth.utilization,
     }
   }
-  // fallback: optimal / sustained_high → show month 1
-  const first = months[0]
-  return {
-    monthIndex: 1,
-    monthLabel: first?.monthLabel ?? 'חודש 1',
-    utilization: first?.utilization ?? 0,
-  }
+
+  return result
 }
 
 export function getStartOfCurrentWeek(today: Date = new Date()): Date {
@@ -85,15 +96,15 @@ export function addMonths(date: Date, n: number): Date {
 }
 
 export function utilizationColorClass(utilization: number): string {
-  if (utilization > 1.1) return 'text-red-900'
-  if (utilization >= 0.8) return 'text-green-600'
-  if (utilization >= 0.5) return 'text-yellow-600'
+  if (utilization > UTILIZATION_OVERLOAD_THRESHOLD) return 'text-red-900'
+  if (utilization >= UTILIZATION_HIGH_THRESHOLD) return 'text-green-600'
+  if (utilization >= UTILIZATION_LOW_THRESHOLD) return 'text-yellow-600'
   return 'text-red-600'
 }
 
 export function utilizationBarColorClass(utilization: number): string {
-  if (utilization > 1.1) return 'bg-red-900'
-  if (utilization >= 0.8) return 'bg-green-500'
-  if (utilization >= 0.5) return 'bg-yellow-400'
+  if (utilization > UTILIZATION_OVERLOAD_THRESHOLD) return 'bg-red-900'
+  if (utilization >= UTILIZATION_HIGH_THRESHOLD) return 'bg-green-500'
+  if (utilization >= UTILIZATION_LOW_THRESHOLD) return 'bg-yellow-400'
   return 'bg-red-400'
 }

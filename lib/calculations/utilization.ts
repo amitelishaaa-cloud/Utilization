@@ -88,13 +88,23 @@ function pipelineHoursForWeek(weekStart: Date, deals: PipelineDeal[]): number {
   for (const d of deals) {
     if (d.status !== 'active') continue
     const dStart = parseDate(d.expected_start_date)
-    const dEnd = parseDate(d.expected_end_date)
     if (dStart.getTime() > weekEnd.getTime()) continue
-    if (dEnd.getTime() < weekStart.getTime()) continue
 
     const probability = d.probability_override ?? PIPELINE_STAGES[d.current_stage].probability
-    const dealWeeks = (dEnd.getTime() - dStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
-    hours += (d.estimated_hours / dealWeeks) * probability
+
+    if (d.deal_type === 'retainer') {
+      // מראה אחיד עם committedHoursForWeek לריטיינרים אמיתיים:
+      // אין end_date → תורם עד סוף חלון החישוב
+      const dEnd = d.expected_end_date ? parseDate(d.expected_end_date) : null
+      if (dEnd && dEnd.getTime() < weekStart.getTime()) continue
+      hours += (d.monthly_hours! / 4.33) * probability
+    } else {
+      // project — ההתנהגות הקיימת ללא שינוי
+      const dEnd = parseDate(d.expected_end_date!)
+      if (dEnd.getTime() < weekStart.getTime()) continue
+      const dealWeeks = (dEnd.getTime() - dStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
+      hours += (d.estimated_hours! / dealWeeks) * probability
+    }
   }
 
   return hours

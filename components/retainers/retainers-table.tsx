@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 import { deleteRetainerAction } from '@/app/(app)/retainers/actions'
+import { formatDate } from '@/lib/utils'
 import type { Retainer, RetainerStatus } from '@/lib/types'
 
 const STATUS_LABELS: Record<RetainerStatus, string> = {
@@ -70,8 +71,8 @@ function RetainerRow({ retainer }: { retainer: Retainer }) {
       : `₪${retainer.monthly_fixed_price}/חודש`
 
   const datesLabel = retainer.end_date
-    ? `${retainer.start_date} – ${retainer.end_date}`
-    : `${retainer.start_date} – פתוח`
+    ? `${formatDate(retainer.start_date)} – ${formatDate(retainer.end_date)}`
+    : `${formatDate(retainer.start_date)} – פתוח`
 
   return (
     <>

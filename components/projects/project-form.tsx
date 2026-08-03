@@ -1,5 +1,5 @@
 'use client'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import FormField from '@/components/ui/form-field'
 import PricingFields from '@/components/ui/pricing-fields'
@@ -28,6 +28,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 
 export default function ProjectForm({ action, clients, defaultValues, mode }: ProjectFormProps) {
   const [state, formAction, isPending] = useActionState(action, { error: null })
+  const [startDate, setStartDate] = useState(defaultValues?.start_date ?? '')
 
   return (
     <form action={formAction} className="bg-white border border-gray-200 rounded-xl p-6 max-w-2xl space-y-6">
@@ -106,6 +107,7 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
             name="start_date"
             defaultValue={defaultValues?.start_date ?? ''}
             required
+            onChange={(e) => setStartDate(e.target.value)}
             className={INPUT_CLASS}
           />
         </FormField>
@@ -116,6 +118,7 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
               name="end_date"
               defaultValue={defaultValues?.end_date ?? ''}
               required
+              min={startDate || undefined}
               className={INPUT_CLASS}
             />
           </FormField>

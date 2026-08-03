@@ -36,7 +36,7 @@ export default async function CockpitPage() {
   )
 
   const hasData = weeks.some(w => w.committedHours + w.pipelineHours > 0)
-  const heroMonth = getHeroMonth(weeks, recommendation)
+  const heroMonth = getHeroMonth(weeks)
   const months = groupWeeksByMonth(weeks)
 
   return (

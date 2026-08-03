@@ -1,5 +1,5 @@
 'use client'
-import { useActionState } from 'react'
+import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import FormField from '@/components/ui/form-field'
 import PricingFields from '@/components/ui/pricing-fields'
@@ -27,6 +27,7 @@ const STATUS_OPTIONS = [
 
 export default function RetainerForm({ action, clients, defaultValues, mode }: RetainerFormProps) {
   const [state, formAction, isPending] = useActionState(action, { error: null })
+  const [startDate, setStartDate] = useState(defaultValues?.start_date ?? '')
 
   return (
     <form action={formAction} className="bg-white border border-gray-200 rounded-xl p-6 max-w-2xl space-y-6">
@@ -91,6 +92,7 @@ export default function RetainerForm({ action, clients, defaultValues, mode }: R
             name="start_date"
             defaultValue={defaultValues?.start_date ?? ''}
             required
+            onChange={(e) => setStartDate(e.target.value)}
             className={INPUT_CLASS}
           />
         </FormField>
@@ -99,6 +101,7 @@ export default function RetainerForm({ action, clients, defaultValues, mode }: R
             type="date"
             name="end_date"
             defaultValue={defaultValues?.end_date ?? ''}
+            min={startDate || undefined}
             className={INPUT_CLASS}
           />
         </FormField>
