@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createServerClient, requireUser } from '@/lib/supabase/server'
 import StageHistoryTimeline from '@/components/pipeline/stage-history-timeline'
+import DateRange from '@/components/ui/date-range'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
 import { formatDate } from '@/lib/utils'
 import type { PipelineStage, DealStatus } from '@/lib/types'
@@ -103,7 +104,10 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             <div className="flex justify-between">
               <span className="text-gray-500">תאריכים</span>
               <span className="font-medium text-gray-900">
-                {formatDate(deal.expected_start_date)} – {formatDate(deal.expected_end_date)}
+                <DateRange
+                  start={deal.expected_start_date}
+                  end={deal.expected_end_date}
+                />
               </span>
             </div>
             {deal.closed_at && (

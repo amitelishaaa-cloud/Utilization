@@ -2,8 +2,8 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
+import DateRange from '@/components/ui/date-range'
 import { deleteRetainerAction } from '@/app/(app)/retainers/actions'
-import { formatDate } from '@/lib/utils'
 import type { Retainer, RetainerStatus } from '@/lib/types'
 
 const STATUS_LABELS: Record<RetainerStatus, string> = {
@@ -70,10 +70,6 @@ function RetainerRow({ retainer }: { retainer: Retainer }) {
       ? `₪${retainer.hourly_rate}/ש'`
       : `₪${retainer.monthly_fixed_price}/חודש`
 
-  const datesLabel = retainer.end_date
-    ? `${formatDate(retainer.start_date)} – ${formatDate(retainer.end_date)}`
-    : `${formatDate(retainer.start_date)} – פתוח`
-
   return (
     <>
       <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
@@ -85,7 +81,9 @@ function RetainerRow({ retainer }: { retainer: Retainer }) {
           </span>
         </td>
         <td className="px-4 py-3 text-sm text-gray-600">{retainer.monthly_hours}</td>
-        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{datesLabel}</td>
+        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+          <DateRange start={retainer.start_date} end={retainer.end_date} />
+        </td>
         <td className="px-4 py-3 text-sm text-gray-600">{pricingLabel}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2 justify-end">

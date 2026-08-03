@@ -2,8 +2,8 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
+import DateRange from '@/components/ui/date-range'
 import { deleteProjectAction } from '@/app/(app)/projects/actions'
-import { formatDate } from '@/lib/utils'
 import type { Project, ProjectStatus } from '@/lib/types'
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
@@ -71,7 +71,6 @@ function ProjectRow({ project }: { project: Project }) {
       ? `₪${project.hourly_rate}/ש'`
       : `₪${project.fixed_price} קבוע`
 
-  const dateLabel = `${formatDate(project.start_date)} – ${formatDate(project.end_date)}${project.is_end_date_estimated ? ' (משוער)' : ''}`
 
   return (
     <>
@@ -83,7 +82,10 @@ function ProjectRow({ project }: { project: Project }) {
             {STATUS_LABELS[project.status]}
           </span>
         </td>
-        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{dateLabel}</td>
+        <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+          <DateRange start={project.start_date} end={project.end_date} />
+          {project.is_end_date_estimated && ' (משוער)'}
+        </td>
         <td className="px-4 py-3 text-sm text-gray-600">{pricingLabel}</td>
         <td className="px-4 py-3">
           <div className="flex items-center gap-2 justify-end">
