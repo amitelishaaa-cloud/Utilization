@@ -61,6 +61,7 @@ DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CR
 | קובץ/תיקייה | Note לקרוא |
 |-------------|------------|
 | `lib/types.ts`, `lib/supabase/` | `Vault/concepts/Data-Model.md` |
+| `app/(auth)/`, `proxy.ts`, `lib/auth/`, `components/auth/` | `Vault/concepts/Auth.md` |
 | `lib/calculations/utilization.ts`, `recommendations.ts`, `types.ts` | `Vault/concepts/Utilization-Engine.md` |
 | `lib/calculations/cockpit-helpers.ts`, `lib/calculations/fetcher.ts`, `app/(app)/cockpit/` | `Vault/concepts/Cockpit.md` |
 | `lib/pipeline-stages.ts`, `app/(app)/pipeline/`, `components/pipeline/` | `Vault/concepts/Pipeline.md` |

@@ -19,6 +19,7 @@ tags: [index, navigation]
 | [[Retainers]] | התקשרויות חוזרות חודשיות |
 | [[Clients]] | ישות לקוח — מקשרת Projects, Retainers, Pipeline |
 | [[Data-Model]] | Schema, Supabase, TypeScript types |
+| [[Auth]] | התחברות, `proxy.ts`, `requireUser()`, אכיפת RLS |
 | [[UI-Components]] | קומפוננטות UI משותפות, Tailwind, layout |
 
 ## גודל הפרויקט
