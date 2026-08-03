@@ -2,6 +2,7 @@
 import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
+import { PriorityBadge, NotesIcon } from '@/components/ui/meta-cells'
 import { deleteDealAction } from '@/app/(app)/pipeline/actions'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
 import type { PipelineDeal, DealStatus } from '@/lib/types'
@@ -51,6 +52,7 @@ export default function DealsTable({
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">שלב</th>
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">הסתברות</th>
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">סטטוס</th>
+            <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">עדיפות</th>
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">תמחור</th>
             <th className="px-4 py-3" />
           </tr>
@@ -90,9 +92,12 @@ function DealRow({ deal, realized }: { deal: PipelineDeal; realized?: { href: st
     <>
       <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
         <td className="px-4 py-3 text-sm font-medium text-gray-900">
-          <Link href={`/pipeline/${deal.id}`} className="hover:underline">
-            {deal.name}
-          </Link>
+          <span className="inline-flex items-center gap-1.5">
+            <Link href={`/pipeline/${deal.id}`} className="hover:underline">
+              {deal.name}
+            </Link>
+            <NotesIcon notes={deal.notes} />
+          </span>
         </td>
         <td className="px-4 py-3 text-sm text-gray-600">
           {deal.clients?.name ?? (
@@ -121,6 +126,9 @@ function DealRow({ deal, realized }: { deal: PipelineDeal; realized?: { href: st
                 </span>
               ))}
           </div>
+        </td>
+        <td className="px-4 py-3">
+          <PriorityBadge priority={deal.priority} />
         </td>
         <td className="px-4 py-3 text-sm text-gray-600">{pricingLabel}</td>
         <td className="px-4 py-3">

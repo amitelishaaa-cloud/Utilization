@@ -13,14 +13,14 @@ related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Pipeline]], [[Co
 - `app/(app)/projects/new/page.tsx` — טופס פרויקט חדש
 - `app/(app)/projects/[id]/edit/page.tsx` — עריכת פרויקט
 - `app/(app)/projects/actions.ts` — Server Actions: create, update, delete
-- `components/projects/project-form.tsx` — טופס פרויקט (pricing fields, תאריכים); `useState` עוקב `startDate` לשם validation UI ללא end_date קודם ל-start_date
-- `components/projects/projects-table.tsx` — טבלת פרויקטים עם סטטוס + לקוח; משתמש ב-`formatDate()` לפורמט start/end dates
+- `components/projects/project-form.tsx` — טופס פרויקט (pricing fields, תאריכים); `useState` עוקב `startDate` לשם validation UI ללא end_date קודם ל-start_date. שדות ההערות/עדיפות/תזכורת מגיעים מ-`components/ui/meta-fields.tsx`
+- `components/projects/projects-table.tsx` — טבלת פרויקטים עם סטטוס + עדיפות + לקוח; משתמש ב-`formatDate()` לפורמט start/end dates וב-`PriorityBadge`/`NotesIcon` מ-`components/ui/meta-cells.tsx`
 
 ## Key types / exports
 
 **מ-`lib/types.ts`** (ראה [[Data-Model]])
 - `Project` — הישות המרכזית; שים לב ל-`source_deal_id` — פרויקטים שנפתחו מ-[[Pipeline]] deal
-  - ⚠️ הטיפוס מצהיר גם על `notes` ו-`priority`, אבל **העמודות האלה לא קיימות ב-DB** ולא נכתבות/נקראות באף מקום. אל תכניס אותן ל-insert.
+  - `notes`, `priority` (1-5, 5 = הגבוה ביותר), `reminder_date` — שדות מידע אופציונליים. `priority` **לא** משפיע על מנוע החישוב; `reminder_date` הוא עמודה בלבד ללא מנגנון שליחה. ראה [[Data-Model]].
 - `ProjectWeeklyAllocation` — `{ project_id, week_start, allocated_hours }`
 - `ProjectStatus` — `'active' | 'completed' | 'cancelled'`
 - `PricingType` — `'hourly' | 'fixed'`

@@ -3,6 +3,7 @@ import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import FormField from '@/components/ui/form-field'
 import PricingFields from '@/components/ui/pricing-fields'
+import MetaFields from '@/components/ui/meta-fields'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
 import type { Client, DealType, PipelineDeal } from '@/lib/types'
 
@@ -204,6 +205,12 @@ export default function DealForm({ action, clients, defaultValues, mode }: DealF
           </select>
         </FormField>
       )}
+
+      <MetaFields
+        defaultNotes={defaultValues?.notes}
+        defaultPriority={defaultValues?.priority}
+        defaultReminderDate={defaultValues?.reminder_date}
+      />
 
       <div className="flex gap-3 pt-2">
         <button

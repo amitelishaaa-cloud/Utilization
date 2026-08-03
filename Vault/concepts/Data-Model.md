@@ -19,15 +19,30 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 - `Client` — `{ id, user_id, name, created_at }`
 - `PricingType` — `'hourly' | 'fixed'`
 - `ProjectStatus` — `'active' | 'completed' | 'cancelled'`
-- `Project` — `{ id, user_id, client_id, source_deal_id, name, pricing_type, estimated_hours, actual_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status, notes: string | null, priority: 'low' | 'medium' | 'high' | null, created_at, clients? }`
-  - ⚠️ **`notes` ו-`priority` לא קיימות ב-DB בפועל** (אומת מול Supabase, 2026-08-03) — הצהרה בטיפוס בלבד, ללא עמודה וללא נתיב קוד. אל תכניס אותן ל-insert/update.
+- `Priority` — `1 | 2 | 3 | 4 | 5`, **5 = הגבוה ביותר**
+- `Project` — `{ id, user_id, client_id, source_deal_id, name, pricing_type, estimated_hours, actual_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status, notes: string | null, priority: Priority | null, reminder_date: string | null, created_at, clients? }`
   - `source_deal_id` — עסקת [[Pipeline]] שממנה נוצר הפרויקט (nullable, נוסף במיגרציה `20260803000001`)
 - `RetainerStatus` — `'active' | 'ended'`
 - `RetainerPricingType` — `'hourly' | 'fixed_monthly'`
-- `Retainer` — `{ id, user_id, client_id, source_deal_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date, status, created_at, clients? }`
+- `Retainer` — `{ id, user_id, client_id, source_deal_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date, status, notes: string | null, created_at, clients? }`
 - `PipelineStage` — `'inquiry' | 'proposal' | 'negotiation' | 'verbal_close' | 'contract'`
 - `DealStatus` — `'active' | 'won' | 'lost'`
-- `PipelineDeal` — `{ id, user_id, client_id, name, deal_type, pricing_type, estimated_hours, monthly_hours, hourly_rate, fixed_price, expected_start_date, expected_end_date, current_stage, probability_override, status, created_at, closed_at, clients? }`
+- `PipelineDeal` — `{ id, user_id, client_id, name, deal_type, pricing_type, estimated_hours, monthly_hours, hourly_rate, fixed_price, expected_start_date, expected_end_date, current_stage, probability_override, status, notes: string | null, priority: Priority | null, reminder_date: string | null, created_at, closed_at, clients? }`
+
+### שדות מידע: `notes` / `priority` / `reminder_date`
+
+נוספו במיגרציה `20260803000002`. הפריסה **א-סימטרית בכוונה**:
+
+| | `projects` | `pipeline_deals` | `retainers` |
+|---|---|---|---|
+| `notes` | ✅ | ✅ | ✅ |
+| `priority` | ✅ | ✅ | ❌ |
+| `reminder_date` | ✅ | ✅ | ❌ |
+
+- `priority` — `smallint CHECK (priority BETWEEN 1 AND 5)`. **מידע וסינון בלבד** — אסור שיגיע למנוע החישוב או להמלצות. מעוגן בטסט `priority, notes ו-reminder_date לא משפיעים על התוצאה` ב-`lib/calculations/__tests__/utilization.test.ts`.
+- `reminder_date` — `date`. **עמודה + input בלבד**: אין cron, אין שליחה, אין התראות.
+- כולם nullable ללא DEFAULT. תוויות ו-badges ב-`lib/priority.ts` (`PRIORITIES`, `PRIORITY_OPTIONS`, `parsePriority`).
+- UI משותף: `components/ui/meta-fields.tsx` (טפסים), `components/ui/meta-cells.tsx` (`PriorityBadge`, `NotesIcon` לטבלאות).
 - `PipelineStageHistory` — `{ id, deal_id, from_stage, to_stage, changed_at }`
 - `ProjectWeeklyAllocation` — `{ id, project_id, week_start, allocated_hours }`
 - `CapacityException` — `{ id, user_id, week_start, available_hours, reason, created_at }`
@@ -45,11 +60,11 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 |------|----------------|
 | `users` | `id, email, default_weekly_hours, plan: 'free'\|'pro', plan_expires_at` |
 | `clients` | `id, user_id, name` |
-| `projects` | `id, user_id, client_id, source_deal_id, estimated_hours, start_date, end_date, status` |
+| `projects` | `id, user_id, client_id, source_deal_id, estimated_hours, start_date, end_date, status, notes, priority, reminder_date` |
 | `project_weekly_allocations` | `project_id, week_start, allocated_hours` |
-| `retainers` | `id, user_id, client_id, source_deal_id, monthly_hours, start_date, end_date, status` |
+| `retainers` | `id, user_id, client_id, source_deal_id, monthly_hours, start_date, end_date, status, notes` |
 | `capacity_exceptions` | `user_id, week_start, available_hours, reason` |
-| `pipeline_deals` | `id, user_id, client_id, estimated_hours, expected_start_date, expected_end_date, current_stage, probability_override, status` |
+| `pipeline_deals` | `id, user_id, client_id, estimated_hours, expected_start_date, expected_end_date, current_stage, probability_override, status, notes, priority, reminder_date` |
 | `pipeline_stage_history` | `deal_id, from_stage, to_stage, changed_at` |
 
 ## Dependencies & consumers

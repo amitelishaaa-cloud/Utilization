@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 import DateRange from '@/components/ui/date-range'
+import { PriorityBadge, NotesIcon } from '@/components/ui/meta-cells'
 import { deleteProjectAction } from '@/app/(app)/projects/actions'
 import type { Project, ProjectStatus } from '@/lib/types'
 
@@ -41,6 +42,7 @@ export default function ProjectsTable({ projects }: { projects: Project[] }) {
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">שם פרויקט</th>
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">לקוח</th>
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">סטטוס</th>
+            <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">עדיפות</th>
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">תאריכים</th>
             <th className="text-start px-4 py-3 text-sm font-medium text-gray-600">תמחור</th>
             <th className="px-4 py-3" />
@@ -75,12 +77,20 @@ function ProjectRow({ project }: { project: Project }) {
   return (
     <>
       <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-        <td className="px-4 py-3 text-sm font-medium text-gray-900">{project.name}</td>
+        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+          <span className="inline-flex items-center gap-1.5">
+            {project.name}
+            <NotesIcon notes={project.notes} />
+          </span>
+        </td>
         <td className="px-4 py-3 text-sm text-gray-600">{project.clients?.name ?? '—'}</td>
         <td className="px-4 py-3">
           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[project.status]}`}>
             {STATUS_LABELS[project.status]}
           </span>
+        </td>
+        <td className="px-4 py-3">
+          <PriorityBadge priority={project.priority} />
         </td>
         <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
           <DateRange start={project.start_date} end={project.end_date} />

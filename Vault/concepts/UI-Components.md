@@ -15,10 +15,13 @@ related: [[Cockpit]], [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]]
 - `components/ui/form-field.tsx` — wrapper לשדות טופס עם label + error
 - `components/ui/nav-link.tsx` — קישור ניווט עם active state
 - `components/ui/pricing-fields.tsx` — שדות תמחור (hourly rate / fixed price) לפי `pricing_type`
+- `components/ui/meta-fields.tsx` — שדות המידע המשותפים לטפסים: הערות, עדיפות, תאריך תזכורת. `showPriorityAndReminder={false}` משאיר הערות בלבד (עבור [[Retainers]])
+- `components/ui/meta-cells.tsx` — `PriorityBadge` (badge עדיפות לטבלאות, `—` כשאין ערך) ו-`NotesIcon` (📝 עם הטקסט ב-`title`)
 - `components/ui/date-range.tsx` — טווח תאריכים `start – end` בתוך `<span dir="ltr">`; `end: null` מרנדר `openLabel` (ברירת מחדל `'פתוח'`). ראה [[#טווחי תאריכים ב-RTL]]
 
 **Utilities:**
 - `lib/utils.ts` — `formatDate(input: string): string` — פורמט תאריכים אחיד DD/MM/YYYY (קבל YYYY-MM-DD strings או ISO timestamps)
+- `lib/priority.ts` — `PRIORITIES` (תוויות + Tailwind classes סטטיים לכל דירוג 1-5), `PRIORITY_OPTIONS` (סדר תצוגה מהגבוה לנמוך), `parsePriority()` (נרמול FormData ל-`Priority | null`)
 
 **Layout & styles:**
 - `app/(app)/layout.tsx` — sidebar nav + main content wrapper; RTL כברירת מחדל

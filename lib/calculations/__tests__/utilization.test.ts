@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calcWeeklyUtilization } from '@/lib/calculations/utilization'
+import { calcRecommendation } from '@/lib/calculations/recommendations'
 import type { UtilizationInput } from '@/lib/calculations/types'
 import type {
   Project,
@@ -27,6 +28,9 @@ function makeProject(overrides: Partial<Project> = {}): Project {
     end_date: '2025-07-27',
     is_end_date_estimated: false,
     status: 'active',
+    notes: null,
+    priority: null,
+    reminder_date: null,
     created_at: '2025-01-01T00:00:00Z',
     ...overrides,
   }
@@ -49,6 +53,9 @@ function makeDeal(overrides: Partial<PipelineDeal> = {}): PipelineDeal {
     current_stage: 'negotiation',
     probability_override: null,
     status: 'active',
+    notes: null,
+    priority: null,
+    reminder_date: null,
     created_at: '2025-01-01T00:00:00Z',
     closed_at: null,
     ...overrides,
@@ -242,6 +249,7 @@ describe('calcWeeklyUtilization', () => {
       start_date: '2025-01-01',
       end_date: null,
       status: 'active',
+      notes: null,
       created_at: '2025-01-01T00:00:00Z',
     }
     const input = makeInput({
@@ -272,6 +280,7 @@ describe('calcWeeklyUtilization', () => {
         current_stage: 'negotiation', // probability 0.55
         probability_override: null,
         status: 'active', created_at: '', closed_at: null,
+        notes: null, priority: null, reminder_date: null,
       }],
     }
     const result = calcWeeklyUtilization(input)
@@ -297,6 +306,7 @@ describe('calcWeeklyUtilization', () => {
         current_stage: 'contract',        // probability 1.0
         probability_override: null,
         status: 'active', created_at: '', closed_at: null,
+        notes: null, priority: null, reminder_date: null,
       }],
     }
     const result = calcWeeklyUtilization(input)
@@ -323,10 +333,35 @@ describe('calcWeeklyUtilization', () => {
         current_stage: 'contract',
         probability_override: null,
         status: 'active', created_at: '', closed_at: null,
+        notes: null, priority: null, reminder_date: null,
       }],
     }
     const result = calcWeeklyUtilization(input)
     expect(result[0].pipelineHours).toBe(0)          // שבוע 1 — לפני התחלת הדיל
     expect(result[1].pipelineHours).toBeCloseTo(10, 1) // שבוע 2 — תוך כדי
+  })
+
+  // priority/notes/reminder_date הם מידע וסינון בלבד — החלטת מוצר מפורשת.
+  // הטסט הזה מעגן שהם לא דולפים לחישוב דרך ה-select('*') של fetcher.ts.
+  it('priority, notes ו-reminder_date לא משפיעים על התוצאה', () => {
+    const allocations: ProjectWeeklyAllocation[] = [
+      { id: 'a1', project_id: 'proj-1', week_start: '2025-07-07', allocated_hours: 20 },
+      { id: 'a2', project_id: 'proj-1', week_start: '2025-07-14', allocated_hours: 20 },
+    ]
+
+    const bare = calcWeeklyUtilization(
+      makeInput({ projects: [makeProject()], allocations, deals: [makeDeal()] }),
+    )
+    const annotated = calcWeeklyUtilization(
+      makeInput({
+        projects: [makeProject({ priority: 5, notes: 'דחוף מאוד', reminder_date: '2025-07-10' })],
+        allocations,
+        deals: [makeDeal({ priority: 1, notes: 'לא דחוף', reminder_date: '2025-07-11' })],
+      }),
+    )
+
+    expect(annotated).toEqual(bare)
+    // וגם ההמלצה שנגזרת מהם — calcRecommendation מקבל weeks בלבד
+    expect(calcRecommendation(annotated)).toEqual(calcRecommendation(bare))
   })
 })

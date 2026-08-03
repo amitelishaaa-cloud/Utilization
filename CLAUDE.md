@@ -46,7 +46,8 @@ DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CR
 ## נקודות פתוחות שחשוב לזכור
 
 - כפילות ספי צבע (50%/80%/110%) בין `lib/calculations/cockpit-helpers.ts` ל-`recommendations.ts` - טרם אוחדה למקור אמת אחד. אל תניח סנכרון בין השניים אם תיגע באחד מהם.
-- **`projects.notes` ו-`projects.priority` מוצהרים ב-`lib/types.ts` אך לא קיימים ב-DB** (אומת מול Supabase). אין להם עמודה, מיגרציה, או נתיב קוד - אל תכניס אותם ל-insert/update לפני שמוסיפים מיגרציה.
+- **`notes`/`priority`/`reminder_date` פרוסים באופן א-סימטרי בכוונה**: `projects` ו-`pipeline_deals` מקבלות את שלושתם, `retainers` מקבלת `notes` **בלבד**. אל תוסיף `priority`/`reminder_date` ל-insert של retainers - אין להן עמודה. `priority` הוא סולם 1-5 ש-**5 = הגבוה ביותר**, ומידע/סינון בלבד: אסור שייכנס למנוע החישוב או להמלצות (מעוגן בטסט ב-`utilization.test.ts`).
+- **`reminder_date` הוא עמודה ו-input בלבד** - אין cron, אין שליחה, אין התראות. אל תניח שקיים מנגנון תזכורות.
 - **איפוס סיסמה לא ממומש**. `/forgot-password` הוא עמוד סטטי בלבד ("פנה למנהל המערכת") - אין `resetPasswordForEmail` ואין SMTP. הוחלט מודע בזמן שיש משתמש אחד.
 - **Confirm Email חייב להישאר כבוי** ב-Supabase (Authentication → Providers → Email). `signUpAction` מצפה ל-session חוזרת ומחזיר שגיאה מפורשת אם אין - אם מדליקים את הטוגל, ההרשמה נשברת.
 

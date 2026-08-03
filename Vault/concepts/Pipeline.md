@@ -17,8 +17,8 @@ related: [[Data-Model]], [[Utilization-Engine]], [[Clients]], [[Projects]], [[Co
 - `components/pipeline/realize-deal-modal.tsx` — מודאל מימוש עסקה שנסגרה; קורא ל-`buildProjectDefaults` / `buildRetainerDefaults` מ-`lib/deal-realization.ts`; נשלח ל-`realizeDealAction` עם FormData
 - `lib/deal-realization.ts` — מיפוי טהור מעסקה לערכי ברירת המחדל של פרויקט/ריטיינר
 - `lib/validation.ts` — `validateProject` / `validateRetainer`, משותפות ל-actions של [[Projects]], [[Retainers]] ו-Pipeline (אי אפשר לייצא פונקציה סינכרונית מקובץ `'use server'`)
-- `components/pipeline/deal-form.tsx` — טופס עסקה (שדות + validation); ניהול state של `expectedStartDate` + חישוב `min` תאריך סיום בהתאם
-- `components/pipeline/deals-table.tsx` — טבלת עסקאות עם סטטוס + שלב
+- `components/pipeline/deal-form.tsx` — טופס עסקה (שדות + validation); ניהול state של `expectedStartDate` + חישוב `min` תאריך סיום בהתאם. שדות ההערות/עדיפות/תזכורת מגיעים מ-`components/ui/meta-fields.tsx`
+- `components/pipeline/deals-table.tsx` — טבלת עסקאות עם סטטוס + שלב + עדיפות (`PriorityBadge`/`NotesIcon` מ-`components/ui/meta-cells.tsx`)
 - `components/pipeline/stage-history-timeline.tsx` — ציר זמן מעברי שלבים
 
 ## Key types / exports
@@ -45,8 +45,8 @@ related: [[Data-Model]], [[Utilization-Engine]], [[Clients]], [[Projects]], [[Co
 
 **`lib/deal-realization.ts`**
 - `NEW_CLIENT_VALUE` — ערך const (`'__new__'`) ל-option של יצירת לקוח חדש בטופס המודאל
-- `ProjectDefaults` — `{ client_id, name, pricing_type, estimated_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated }`
-- `RetainerDefaults` — `{ client_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date }`
+- `ProjectDefaults` — `{ client_id, name, pricing_type, estimated_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, notes, priority, reminder_date }`
+- `RetainerDefaults` — `{ client_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date, notes }`
 - `buildProjectDefaults(deal: PipelineDeal): ProjectDefaults` — ממלא מראש ערכים של פרויקט מעסקת pipeline
 - `buildRetainerDefaults(deal: PipelineDeal): RetainerDefaults` — ממלא מראש ערכים של ריטיינר מעסקת pipeline, כולל תרגום `pricing_type: 'fixed' → 'fixed_monthly'`
 
@@ -82,6 +82,7 @@ related: [[Data-Model]], [[Utilization-Engine]], [[Clients]], [[Projects]], [[Co
 - `pricing_type` בענף ריטיינר — `'fixed'` בעסקה מתורגם ל-`'fixed_monthly'`.
 - `monthly_fixed_price` — **לא** מועתק מ-`fixed_price`: בעסקה זה מחיר כולל, ברטיינר זה מחיר לחודש. השדה מגיע ריק עם אזהרה.
 - `is_end_date_estimated` — נשלח `true` כברירת מחדל, כי מקור התאריך הוא `expected_end_date`.
+- `notes` / `priority` / `reminder_date` — **עוברים בירושה** מהעסקה, וניתנים לעריכה במודאל לפני היצירה. בענף ריטיינר עובר `notes` **בלבד** — ל-`retainers` אין עמודות `priority`/`reminder_date` (ראה [[Data-Model]]).
 
 **עסקה שנסגרה וטרם מומשה:** `fetcher.ts` שולף רק deals ב-`status = 'active'`, כך שעסקה `won` נושרת מיד מהחישוב המשוקלל. אם לא נוצר יעד — נוצר חור שקט בתחזית. לכן טבלת ה-Pipeline מציגה באדג' "טרם מומשה", ועמוד העסקה מציג הודעה מפורשת + כפתור להשלמה.
 

@@ -6,6 +6,7 @@ import { createServerClient, requireUser } from '@/lib/supabase/server'
 import StageHistoryTimeline from '@/components/pipeline/stage-history-timeline'
 import RealizeDealModal from '@/components/pipeline/realize-deal-modal'
 import DateRange from '@/components/ui/date-range'
+import { PriorityBadge } from '@/components/ui/meta-cells'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
 import { realizeDealAction } from '@/app/(app)/pipeline/actions'
 import { formatDate } from '@/lib/utils'
@@ -148,6 +149,18 @@ export default async function DealDetailPage({
                 />
               </span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">עדיפות</span>
+              <PriorityBadge priority={deal.priority} />
+            </div>
+            {deal.reminder_date && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">תאריך תזכורת</span>
+                <span className="font-medium text-gray-900">
+                  {formatDate(deal.reminder_date)}
+                </span>
+              </div>
+            )}
             {deal.closed_at && (
               <div className="flex justify-between">
                 <span className="text-gray-500">נסגר ב</span>
@@ -173,6 +186,13 @@ export default async function DealDetailPage({
               </div>
             )}
           </div>
+
+          {deal.notes?.trim() && (
+            <div className="pt-4 border-t border-gray-100">
+              <h3 className="text-sm text-gray-500 mb-2">הערות</h3>
+              <p className="text-sm text-gray-900 whitespace-pre-wrap">{deal.notes}</p>
+            </div>
+          )}
         </div>
 
         {/* Stage history */}

@@ -3,6 +3,7 @@ import { useActionState, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import FormField from '@/components/ui/form-field'
 import PricingFields from '@/components/ui/pricing-fields'
+import MetaFields from '@/components/ui/meta-fields'
 import {
   buildProjectDefaults,
   buildRetainerDefaults,
@@ -198,6 +199,17 @@ export default function RealizeDealModal({ deal, clients, action }: RealizeDealM
                 />
                 תאריך הסיום הוא הערכה
               </label>
+            )}
+
+            {/* עוברים בירושה מהעסקה — ריטיינר מקבל notes בלבד */}
+            {isProject ? (
+              <MetaFields
+                defaultNotes={projectDefaults!.notes}
+                defaultPriority={projectDefaults!.priority}
+                defaultReminderDate={projectDefaults!.reminder_date}
+              />
+            ) : (
+              <MetaFields defaultNotes={retainerDefaults!.notes} showPriorityAndReminder={false} />
             )}
 
             <div className="flex gap-3 justify-end pt-2">

@@ -3,6 +3,7 @@ import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import FormField from '@/components/ui/form-field'
 import PricingFields from '@/components/ui/pricing-fields'
+import MetaFields from '@/components/ui/meta-fields'
 import type { Client, Project } from '@/lib/types'
 
 const INPUT_CLASS =
@@ -148,6 +149,12 @@ export default function ProjectForm({ action, clients, defaultValues, mode }: Pr
           </select>
         </FormField>
       )}
+
+      <MetaFields
+        defaultNotes={defaultValues?.notes}
+        defaultPriority={defaultValues?.priority}
+        defaultReminderDate={defaultValues?.reminder_date}
+      />
 
       <div className="flex gap-3 pt-2">
         <button

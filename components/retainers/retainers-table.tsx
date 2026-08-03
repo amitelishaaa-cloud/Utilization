@@ -3,6 +3,7 @@ import { useState, useTransition } from 'react'
 import Link from 'next/link'
 import ConfirmDialog from '@/components/ui/confirm-dialog'
 import DateRange from '@/components/ui/date-range'
+import { NotesIcon } from '@/components/ui/meta-cells'
 import { deleteRetainerAction } from '@/app/(app)/retainers/actions'
 import type { Retainer, RetainerStatus } from '@/lib/types'
 
@@ -73,7 +74,12 @@ function RetainerRow({ retainer }: { retainer: Retainer }) {
   return (
     <>
       <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-        <td className="px-4 py-3 text-sm font-medium text-gray-900">{retainer.name}</td>
+        <td className="px-4 py-3 text-sm font-medium text-gray-900">
+          <span className="inline-flex items-center gap-1.5">
+            {retainer.name}
+            <NotesIcon notes={retainer.notes} />
+          </span>
+        </td>
         <td className="px-4 py-3 text-sm text-gray-600">{retainer.clients?.name ?? '—'}</td>
         <td className="px-4 py-3">
           <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[retainer.status]}`}>

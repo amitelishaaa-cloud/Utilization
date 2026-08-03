@@ -2,6 +2,9 @@ export type PipelineStage = 'inquiry' | 'proposal' | 'negotiation' | 'verbal_clo
 export type DealStatus = 'active' | 'won' | 'lost'
 export type DealType = 'project' | 'retainer'
 
+/** דירוג עדיפות, 5 = הגבוה ביותר. מידע וסינון בלבד — לא משפיע על מנוע החישוב. */
+export type Priority = 1 | 2 | 3 | 4 | 5
+
 export type PipelineDeal = {
   id: string
   user_id: string
@@ -18,6 +21,9 @@ export type PipelineDeal = {
   current_stage: PipelineStage
   probability_override: number | null
   status: DealStatus
+  notes: string | null
+  priority: Priority | null
+  reminder_date: string | null
   created_at: string
   closed_at: string | null
   clients?: { name: string } | null
@@ -59,7 +65,8 @@ export type Project = {
   is_end_date_estimated: boolean
   status: ProjectStatus
   notes: string | null
-  priority: 'low' | 'medium' | 'high' | null
+  priority: Priority | null
+  reminder_date: string | null
   created_at: string
   clients?: { name: string } | null
 }
@@ -77,6 +84,7 @@ export type Retainer = {
   start_date: string
   end_date: string | null
   status: RetainerStatus
+  notes: string | null
   created_at: string
   clients?: { name: string } | null
 }

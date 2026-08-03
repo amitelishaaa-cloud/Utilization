@@ -5,6 +5,7 @@ import { createServerClient, requireUser } from '@/lib/supabase/server'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
 import { NEW_CLIENT_VALUE } from '@/lib/deal-realization'
 import { validateProject, validateRetainer } from '@/lib/validation'
+import { parsePriority } from '@/lib/priority'
 import type { PipelineStage, DealStatus, DealType } from '@/lib/types'
 
 function parseDealForm(formData: FormData) {
@@ -29,6 +30,10 @@ function parseDealForm(formData: FormData) {
   const rawProbability = ((formData.get('probability_override') as string) ?? '').trim()
   const probability_override = rawProbability ? Number(rawProbability) / 100 : null
 
+  const notes = (((formData.get('notes') as string) ?? '').trim()) || null
+  const priority = parsePriority(formData.get('priority'))
+  const reminder_date = (((formData.get('reminder_date') as string) ?? '').trim()) || null
+
   let hourly_rate: number | null = null
   let fixed_price: number | null = null
   if (pricing_type === 'hourly') {
@@ -42,6 +47,7 @@ function parseDealForm(formData: FormData) {
     estimated_hours, monthly_hours,
     expected_start_date, expected_end_date,
     probability_override, hourly_rate, fixed_price,
+    notes, priority, reminder_date,
   }
 }
 
@@ -229,6 +235,10 @@ function parseRealizedProject(formData: FormData, client_id: string) {
     end_date: formData.get('end_date') as string,
     is_end_date_estimated: formData.get('is_end_date_estimated') === 'on',
     status: 'active' as const,
+    // עוברים בירושה מהעסקה — המודאל מגיש אותם מלאים מראש
+    notes: (((formData.get('notes') as string) ?? '').trim()) || null,
+    priority: parsePriority(formData.get('priority')),
+    reminder_date: (((formData.get('reminder_date') as string) ?? '').trim()) || null,
   }
 }
 
@@ -249,6 +259,8 @@ function parseRealizedRetainer(formData: FormData, client_id: string) {
     start_date: formData.get('start_date') as string,
     end_date: end_date || null,
     status: 'active' as const,
+    // ל-retainers יש notes בלבד — אין לה עמודות priority/reminder_date
+    notes: (((formData.get('notes') as string) ?? '').trim()) || null,
   }
 }
 

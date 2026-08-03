@@ -3,6 +3,7 @@ import { useActionState, useState } from 'react'
 import Link from 'next/link'
 import FormField from '@/components/ui/form-field'
 import PricingFields from '@/components/ui/pricing-fields'
+import MetaFields from '@/components/ui/meta-fields'
 import type { Client, Retainer } from '@/lib/types'
 
 const INPUT_CLASS =
@@ -119,6 +120,8 @@ export default function RetainerForm({ action, clients, defaultValues, mode }: R
           ))}
         </select>
       </FormField>
+
+      <MetaFields defaultNotes={defaultValues?.notes} showPriorityAndReminder={false} />
 
       <div className="flex gap-3 pt-2">
         <button

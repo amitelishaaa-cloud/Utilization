@@ -13,6 +13,7 @@ function parseRetainerForm(formData: FormData) {
   const end_date_raw = (formData.get('end_date') as string).trim()
   const end_date = end_date_raw || null
   const status = formData.get('status') as 'active' | 'ended'
+  const notes = (((formData.get('notes') as string) ?? '').trim()) || null
 
   let hourly_rate: number | null = null
   let monthly_fixed_price: number | null = null
@@ -24,7 +25,7 @@ function parseRetainerForm(formData: FormData) {
 
   return {
     name, client_id, pricing_type, monthly_hours,
-    hourly_rate, monthly_fixed_price, start_date, end_date, status,
+    hourly_rate, monthly_fixed_price, start_date, end_date, status, notes,
   }
 }
 

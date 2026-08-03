@@ -13,13 +13,14 @@ related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Cockpit]], [[Pip
 - `app/(app)/retainers/new/page.tsx` — טופס רטיינר חדש
 - `app/(app)/retainers/[id]/edit/page.tsx` — עריכת רטיינר
 - `app/(app)/retainers/actions.ts` — Server Actions: create, update, delete
-- `components/retainers/retainer-form.tsx` — טופס רטיינר; `useState` עוקב `startDate` לשם validation UI ללא end_date קודם ל-start_date
-- `components/retainers/retainers-table.tsx` — טבלת רטיינרים עם סטטוס; משתמש ב-`formatDate()` לפורמט start/end dates
+- `components/retainers/retainer-form.tsx` — טופס רטיינר; `useState` עוקב `startDate` לשם validation UI ללא end_date קודם ל-start_date. שדה ההערות מגיע מ-`components/ui/meta-fields.tsx` עם `showPriorityAndReminder={false}`
+- `components/retainers/retainers-table.tsx` — טבלת רטיינרים עם סטטוס; משתמש ב-`formatDate()` לפורמט start/end dates וב-`NotesIcon` מ-`components/ui/meta-cells.tsx`
 
 ## Key types / exports
 
 **מ-`lib/types.ts`** (ראה [[Data-Model]])
 - `Retainer` — הישות המרכזית; `end_date` יכול להיות `null` (רטיינר פתוח); `source_deal_id` — עסקת [[Pipeline]] שממנה נוצר הרטיינר (nullable, נוסף במיגרציה `20260803000001` יחד עם partial unique index שמונע כפילות)
+  - `notes` — שדה הערות חופשי (מיגרציה `20260803000002`). **ל-retainers אין `priority` ואין `reminder_date`** — א-סימטריה מכוונת מול [[Projects]] ו-[[Pipeline]]. אל תכניס אותם ל-insert. ראה [[Data-Model]].
 - `RetainerStatus` — `'active' | 'ended'`
 - `RetainerPricingType` — `'hourly' | 'fixed_monthly'`
 

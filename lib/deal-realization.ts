@@ -1,4 +1,4 @@
-import type { PipelineDeal, PricingType, RetainerPricingType } from '@/lib/types'
+import type { PipelineDeal, PricingType, RetainerPricingType, Priority } from '@/lib/types'
 
 /**
  * ערכי ברירת המחדל שהמודאל "מימוש עסקה" ממלא מראש מנתוני העסקה.
@@ -19,6 +19,9 @@ export type ProjectDefaults = {
   start_date: string
   end_date: string | null
   is_end_date_estimated: boolean
+  notes: string | null
+  priority: Priority | null
+  reminder_date: string | null
 }
 
 export type RetainerDefaults = {
@@ -30,6 +33,7 @@ export type RetainerDefaults = {
   monthly_fixed_price: number | null
   start_date: string
   end_date: string | null
+  notes: string | null
 }
 
 export function buildProjectDefaults(deal: PipelineDeal): ProjectDefaults {
@@ -44,6 +48,9 @@ export function buildProjectDefaults(deal: PipelineDeal): ProjectDefaults {
     end_date: deal.expected_end_date,
     // מקור התאריך הוא expected_end_date — כלומר הערכה, לא תאריך מחייב
     is_end_date_estimated: true,
+    notes: deal.notes,
+    priority: deal.priority,
+    reminder_date: deal.reminder_date,
   }
 }
 
@@ -60,5 +67,7 @@ export function buildRetainerDefaults(deal: PipelineDeal): RetainerDefaults {
     monthly_fixed_price: null,
     start_date: deal.expected_start_date,
     end_date: deal.expected_end_date,
+    // priority ו-reminder_date לא עוברים — אין להן עמודה ב-retainers
+    notes: deal.notes,
   }
 }

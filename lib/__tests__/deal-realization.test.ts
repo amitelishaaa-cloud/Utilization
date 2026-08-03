@@ -19,6 +19,9 @@ function makeDeal(overrides: Partial<PipelineDeal> = {}): PipelineDeal {
     current_stage: 'contract',
     probability_override: null,
     status: 'won',
+    notes: null,
+    priority: null,
+    reminder_date: null,
     created_at: '2026-08-01T00:00:00Z',
     closed_at: '2026-08-03T00:00:00Z',
     ...overrides,
@@ -56,6 +59,18 @@ describe('buildProjectDefaults', () => {
 
   it('משאיר client_id כ-null כשלעסקה אין לקוח — המודאל הוא שידרוש אותו', () => {
     expect(buildProjectDefaults(makeDeal({ client_id: null })).client_id).toBeNull()
+  })
+
+  it('מוריש notes, priority ו-reminder_date מהעסקה לפרויקט', () => {
+    const d = buildProjectDefaults(
+      makeDeal({ notes: 'לתאם קיקאוף', priority: 5, reminder_date: '2026-09-15' }),
+    )
+
+    expect(d).toMatchObject({
+      notes: 'לתאם קיקאוף',
+      priority: 5,
+      reminder_date: '2026-09-15',
+    })
   })
 })
 
@@ -104,5 +119,15 @@ describe('buildRetainerDefaults', () => {
   it('שומר על ריטיינר פתוח — expected_end_date ריק נשאר null', () => {
     const d = buildRetainerDefaults(makeRetainerDeal({ expected_end_date: null }))
     expect(d.end_date).toBeNull()
+  })
+
+  it('מוריש notes בלבד — ל-retainers אין עמודות priority ו-reminder_date', () => {
+    const d = buildRetainerDefaults(
+      makeRetainerDeal({ notes: 'ריטיינר חודשי קבוע', priority: 5, reminder_date: '2026-09-15' }),
+    )
+
+    expect(d.notes).toBe('ריטיינר חודשי קבוע')
+    expect(d).not.toHaveProperty('priority')
+    expect(d).not.toHaveProperty('reminder_date')
   })
 })

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createServerClient, requireUser } from '@/lib/supabase/server'
 import { validateProject } from '@/lib/validation'
+import { parsePriority } from '@/lib/priority'
 
 function parseProjectForm(formData: FormData) {
   const name = (formData.get('name') as string).trim()
@@ -15,6 +16,9 @@ function parseProjectForm(formData: FormData) {
   const end_date = formData.get('end_date') as string
   const is_end_date_estimated = formData.get('is_end_date_estimated') === 'on'
   const status = (formData.get('status') as 'active' | 'completed' | 'cancelled') ?? 'active'
+  const notes = (((formData.get('notes') as string) ?? '').trim()) || null
+  const priority = parsePriority(formData.get('priority'))
+  const reminder_date = (((formData.get('reminder_date') as string) ?? '').trim()) || null
 
   let hourly_rate: number | null = null
   let fixed_price: number | null = null
@@ -27,6 +31,7 @@ function parseProjectForm(formData: FormData) {
   return {
     name, client_id, pricing_type, estimated_hours, actual_hours,
     hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status,
+    notes, priority, reminder_date,
   }
 }
 
