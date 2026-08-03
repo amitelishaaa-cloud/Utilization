@@ -21,9 +21,9 @@ related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]]
 
 **`lib/calculations/cockpit-helpers.ts`**
 - `MonthSummary` — `{ yearMonth, monthLabel, monthIndex, utilization, weeks: WeekBreakdown[] }`
-- `HeroMonth` — `{ monthIndex, monthLabel, utilization, nextMonthOverload?: { monthIndex, monthLabel, utilization } }`
+- `HeroMonth` — `{ monthIndex, monthLabel, utilization, nextMonthOverload?: { monthIndex, monthLabel, utilization } }` — עוטף דאטה לחודש הנוכחי + overload בחודש הבא
 - `groupWeeksByMonth(weeks): MonthSummary[]` — ממיין weeks לחודשים, capacity-weighted utilization
-- `getHeroMonth(weeks, today?): HeroMonth` — מחזיר את החודש הנוכחי לפי `today` (ברירת מחדל: `new Date()`). `nextMonthOverload` מאוכלס אם החודש הבא חורג מ-`UTILIZATION_OVERLOAD_THRESHOLD` (>110%); אינו תלוי ב-`recommendation`
+- `getHeroMonth(weeks, today?): HeroMonth` — מחזיר החודש הנוכחי בפי `today` (ברירת מחדל: `new Date()`). חישוב מבוסס local time (לא UTC). `nextMonthOverload` מאוכלס אם החודש הבא חורג מ-`UTILIZATION_OVERLOAD_THRESHOLD` (>110%)
 - `getStartOfCurrentWeek(today?): Date` — יום שני הנוכחי (UTC)
 - `addMonths(date, n): Date` — מוסיף n חודשים (UTC)
 - `utilizationColorClass(u): string` — Tailwind text color class לפי %
