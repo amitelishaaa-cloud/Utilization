@@ -80,8 +80,10 @@ export default async function DealDetailPage({
             ← חזרה ל-Pipeline
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">{deal.name}</h1>
-          {deal.clients?.name && (
+          {deal.clients?.name ? (
             <p className="text-sm text-gray-500 mt-1">{deal.clients.name}</p>
+          ) : (
+            <p className="text-sm text-gray-400 mt-1">לקוח יוזן בהמשך</p>
           )}
         </div>
         <div className="flex items-center gap-3">
