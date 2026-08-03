@@ -1,15 +1,16 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 import ProjectsTable from '@/components/projects/projects-table'
 
 export default async function ProjectsPage() {
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { data: projects } = await supabase
     .from('projects')
     .select('*, clients(name)')
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   return (

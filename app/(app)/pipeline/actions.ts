@@ -1,7 +1,7 @@
 'use server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
 import type { PipelineStage, DealStatus, DealType } from '@/lib/types'
 
@@ -80,8 +80,8 @@ export async function createDealAction(
   const validationError = validateDeal(data)
   if (validationError) return { error: validationError }
 
-  const supabase = createServerClient()
-  const userId = getDevUserId()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
 
   const { data: deal, error } = await supabase
     .from('pipeline_deals')
@@ -112,8 +112,8 @@ export async function updateDealAction(
 
   const status = (formData.get('status') as DealStatus) || 'active'
 
-  const supabase = createServerClient()
-  const userId = getDevUserId()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
 
   const { data: current, error: fetchError } = await supabase
     .from('pipeline_deals')
@@ -152,12 +152,13 @@ export async function updateDealAction(
 }
 
 export async function deleteDealAction(id: string): Promise<void> {
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('pipeline_deals')
     .delete()
     .eq('id', id)
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
 
   if (error) throw new Error(error.message)
   revalidatePath('/pipeline')

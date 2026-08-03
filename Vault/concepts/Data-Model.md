@@ -10,7 +10,7 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 
 ## Key files
 - `lib/types.ts` — כל ה-TypeScript types המשקפים את ה-DB schema
-- `lib/supabase/server.ts` — server-side Supabase client (service role key) + `getDevUserId()`
+- `lib/supabase/server.ts` — cookie-bound Supabase client (anon key, RLS enforced) + `requireUser()`
 - `lib/pipeline-stages.ts` — קבועי הסתברויות שלב
 
 ## Key types / exports
@@ -31,8 +31,8 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 - `CapacityException` — `{ id, user_id, week_start, available_hours, reason, created_at }`
 
 **`lib/supabase/server.ts`**
-- `createServerClient()` — returns Supabase client using `SUPABASE_SERVICE_ROLE_KEY`
-- `getDevUserId()` — reads `DEV_USER_ID` env var (dev-only shortcut, no auth)
+- `createServerClient()` — **async**. Cookie-bound client using `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Every query runs under RLS.
+- `requireUser()` — **async**. Returns the authenticated `User`, or redirects to `/login`. Call once per request and reuse the result.
 
 **`lib/pipeline-stages.ts`**
 - `PIPELINE_STAGES: Record<PipelineStage, { label: string; probability: number }>` — inquiry:0.10, proposal:0.30, negotiation:0.55, verbal_close:0.80, contract:1.00

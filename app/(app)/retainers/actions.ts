@@ -1,7 +1,7 @@
 'use server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 
 function parseRetainerForm(formData: FormData) {
   const name = (formData.get('name') as string).trim()
@@ -53,10 +53,11 @@ export async function createRetainerAction(
   const validationError = validateRetainer(data)
   if (validationError) return { error: validationError }
 
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('retainers')
-    .insert({ user_id: getDevUserId(), ...data })
+    .insert({ user_id: userId, ...data })
 
   if (error) return { error: error.message }
   redirect('/retainers')
@@ -71,24 +72,26 @@ export async function updateRetainerAction(
   const validationError = validateRetainer(data)
   if (validationError) return { error: validationError }
 
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('retainers')
     .update(data)
     .eq('id', id)
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
 
   if (error) return { error: error.message }
   redirect('/retainers')
 }
 
 export async function deleteRetainerAction(id: string): Promise<void> {
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('retainers')
     .delete()
     .eq('id', id)
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
 
   if (error) throw new Error(error.message)
   revalidatePath('/retainers')

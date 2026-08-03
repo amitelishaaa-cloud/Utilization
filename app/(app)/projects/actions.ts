@@ -1,7 +1,7 @@
 'use server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 
 function parseProjectForm(formData: FormData) {
   const name = (formData.get('name') as string).trim()
@@ -55,10 +55,11 @@ export async function createProjectAction(
   const validationError = validateProject(data)
   if (validationError) return { error: validationError }
 
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('projects')
-    .insert({ user_id: getDevUserId(), ...data })
+    .insert({ user_id: userId, ...data })
 
   if (error) return { error: error.message }
   redirect('/projects')
@@ -73,24 +74,26 @@ export async function updateProjectAction(
   const validationError = validateProject(data)
   if (validationError) return { error: validationError }
 
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('projects')
     .update(data)
     .eq('id', id)
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
 
   if (error) return { error: error.message }
   redirect('/projects')
 }
 
 export async function deleteProjectAction(id: string): Promise<void> {
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('projects')
     .delete()
     .eq('id', id)
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
 
   if (error) throw new Error(error.message)
   revalidatePath('/projects')

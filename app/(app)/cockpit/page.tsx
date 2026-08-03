@@ -1,5 +1,5 @@
 import { fetchUtilization } from '@/lib/calculations/fetcher'
-import { getDevUserId } from '@/lib/supabase/server'
+import { requireUser } from '@/lib/supabase/server'
 import {
   getStartOfCurrentWeek,
   addMonths,
@@ -25,7 +25,7 @@ function EmptyState() {
 }
 
 export default async function CockpitPage() {
-  const userId = getDevUserId()
+  const { id: userId } = await requireUser()
   const startDate = getStartOfCurrentWeek()
   const endDate = addMonths(startDate, 3)
 

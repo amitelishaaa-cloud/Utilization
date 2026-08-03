@@ -33,12 +33,11 @@ export interface [Entity] {
 ## page.tsx — Server Component pattern
 
 ```tsx
-import { createServerClient } from '@/lib/supabase/server'
-import { getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 
 export default async function [Entity]Page() {
-  const supabase = createServerClient()
-  const userId = getDevUserId()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
 
   const { data } = await supabase
     .from('[entities]')
@@ -58,12 +57,12 @@ export default async function [Entity]Page() {
 ```ts
 'use server'
 
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 
 export async function create[Entity](formData: FormData) {
-  const userId = getDevUserId()         // always first
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()   // always first
+  const supabase = await createServerClient()
 
   await supabase.from('[entities]').insert({
     user_id: userId,
@@ -73,6 +72,12 @@ export async function create[Entity](formData: FormData) {
   revalidatePath('/[entity]')
 }
 ```
+
+`requireUser()` is not optional in Server Actions — they are reachable by direct
+POST, so `proxy.ts` never sees them.
+
+Keep the `.eq('user_id', userId)` filters on reads and writes. RLS already scopes
+every query; the filter is a second layer that catches a misconfigured policy.
 
 ## Vault note — required
 
@@ -112,7 +117,7 @@ related: [[Data-Model]], [[Clients]]
 
 - [ ] Type added to `lib/types.ts`
 - [ ] `user_id` present in type and all insert calls
-- [ ] `getDevUserId()` called at top of every Server Action
+- [ ] `await requireUser()` called at top of every page and Server Action
 - [ ] `revalidatePath` called after mutations
 - [ ] Vault concept note created
 - [ ] `npm run build` passes (TypeScript check)

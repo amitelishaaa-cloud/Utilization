@@ -47,11 +47,15 @@ Fill in `.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-DEV_USER_ID=<your-supabase-user-uuid>   # used in dev to bypass auth
 ```
 
 Find these values in your Supabase project under **Settings → API**.
+
+The app talks to Supabase with the anon key only — every query is subject to RLS.
+There is no service-role key in this project; do not add one.
+
+Under **Authentication → Providers → Email**, leave **Confirm email** off. Sign-up
+expects a session back immediately.
 
 ### 5. Run the dev server
 

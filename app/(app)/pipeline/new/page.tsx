@@ -1,16 +1,17 @@
 export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 import DealForm from '@/components/pipeline/deal-form'
 import { createDealAction } from '@/app/(app)/pipeline/actions'
 
 export default async function NewDealPage() {
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { data: clients } = await supabase
     .from('clients')
     .select('id, name')
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
     .order('name')
 
   return (

@@ -14,7 +14,7 @@ export async function fetchUtilization(
   startDate: Date,
   endDate: Date,
 ): Promise<UtilizationFetchResult> {
-  const supabase = createServerClient()
+  const supabase = await createServerClient()
   const startStr = toDateStr(startDate)
   const endStr = toDateStr(endDate)
 

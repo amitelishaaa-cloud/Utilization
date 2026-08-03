@@ -21,10 +21,12 @@ description: Use when writing or modifying any file in app/, components/, or lib
 
 **Data fetching** — call Supabase (or any async I/O) directly in async Server Components or Route Handlers. Supabase credentials stay server-side; only `NEXT_PUBLIC_` env vars reach the client.
 
-**Data mutations** — Server Functions with `'use server'` directive. Always verify auth inside every Server Function — they are reachable via direct POST requests. In dev: call `getDevUserId()` at the top of each action.
+**Data mutations** — Server Functions with `'use server'` directive. Always verify auth inside every Server Function — they are reachable via direct POST requests. Call `await requireUser()` at the top of each action.
+
+**Proxy (formerly middleware)** — Next.js 16 renamed `middleware.ts` to `proxy.ts`. One file at the project root, exporting `proxy(request: NextRequest)`. It refreshes the Supabase session and redirects optimistically; it is not the authorization boundary — `requireUser()` and RLS are.
 
 **Route Handlers** — `app/api/**/route.ts`. Support GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS. GET handlers are not cached by default.
 
-**Supabase** — `@supabase/supabase-js` ^2.110.8. Server client in `lib/supabase/server.ts` (service role key, server-only). Browser client uses `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+**Supabase** — `@supabase/supabase-js` + `@supabase/ssr`. One client only: `createServerClient()` in `lib/supabase/server.ts`, cookie-bound and using the anon key, so every query runs under RLS. It is async — always `await` it. There is deliberately no service-role client and no browser client.
 
 **Tailwind CSS 4** — configured via PostCSS (`postcss.config.mjs`). No `tailwind.config.js`. Customization in `app/globals.css` via `@theme` blocks. Always use static class strings — no dynamic concatenation.

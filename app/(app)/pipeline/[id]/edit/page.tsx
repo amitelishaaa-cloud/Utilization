@@ -2,25 +2,26 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 import DealForm from '@/components/pipeline/deal-form'
 import { updateDealAction } from '@/app/(app)/pipeline/actions'
 
 export default async function EditDealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const [{ data: deal }, { data: clients }] = await Promise.all([
     supabase
       .from('pipeline_deals')
       .select('*, clients(name)')
       .eq('id', id)
-      .eq('user_id', getDevUserId())
+      .eq('user_id', userId)
       .single(),
     supabase
       .from('clients')
       .select('id, name')
-      .eq('user_id', getDevUserId())
+      .eq('user_id', userId)
       .order('name'),
   ])
 

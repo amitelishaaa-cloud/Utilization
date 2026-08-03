@@ -14,7 +14,7 @@ Read these files to understand the exact patterns in use:
 - `lib/types.ts` — existing type structure
 - `app/(app)/clients/page.tsx` — existing Server Component page pattern
 - `app/(app)/clients/actions.ts` — existing Server Actions pattern (if exists, otherwise projects)
-- `lib/supabase/server.ts` — createServerClient + getDevUserId
+- `lib/supabase/server.ts` — createServerClient + requireUser (both async)
 
 ## Step 2 — Produce files
 
@@ -23,13 +23,13 @@ Follow the exact pattern of existing types. Always include `user_id: string`. Us
 
 ### B) app/(app)/[entity]/page.tsx
 - Server Component (no `'use client'` at page level)
-- Fetch with `createServerClient()` + `getDevUserId()`
+- Fetch with `await createServerClient()` + `await requireUser()`
 - Pass data to a Client Component for interactive parts
 - Hebrew UI labels, English field names
 
 ### C) app/(app)/[entity]/actions.ts
 - `'use server'` directive at top
-- `getDevUserId()` called first in every action
+- `await requireUser()` called first in every action
 - create / update / delete functions
 - `revalidatePath('/[entity]')` after mutations
 

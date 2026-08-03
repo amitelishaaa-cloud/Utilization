@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 import StageHistoryTimeline from '@/components/pipeline/stage-history-timeline'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
 import { formatDate } from '@/lib/utils'
@@ -23,12 +23,13 @@ const STATUS_COLORS: Record<DealStatus, string> = {
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { data: deal } = await supabase
     .from('pipeline_deals')
     .select('*, clients(name)')
     .eq('id', id)
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
     .single()
 
   if (!deal) notFound()

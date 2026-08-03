@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 import RetainerForm from '@/components/retainers/retainer-form'
 import { updateRetainerAction } from '../../actions'
 
@@ -12,8 +12,8 @@ export default async function EditRetainerPage({
   params: Promise<{ id: string }>
 }) {
   const { id } = await params
-  const supabase = createServerClient()
-  const userId = getDevUserId()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
 
   const [{ data: retainer }, { data: clients }] = await Promise.all([
     supabase.from('retainers').select('*').eq('id', id).eq('user_id', userId).single(),

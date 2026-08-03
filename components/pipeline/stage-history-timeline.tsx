@@ -3,7 +3,9 @@ import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
 import type { PipelineStage } from '@/lib/types'
 
 export default async function StageHistoryTimeline({ dealId }: { dealId: string }) {
-  const supabase = createServerClient()
+  // Scoped by the RLS policy on pipeline_stage_history, which joins through
+  // pipeline_deals — the table has no user_id column of its own.
+  const supabase = await createServerClient()
   const { data: history } = await supabase
     .from('pipeline_stage_history')
     .select('*')

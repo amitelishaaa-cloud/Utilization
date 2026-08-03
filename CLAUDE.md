@@ -32,7 +32,8 @@ There is no lint script configured. TypeScript errors surface during `npm run bu
 
 ## החלטות ארכיטקטורה ייחודיות לפרויקט
 
-- **דפוס RLS ללא auth בשלב הפיתוח**: משתמשים ב-Service Role Key (server-only, ב-`lib/supabase/server.ts`) שעוקף RLS, יחד עם `DEV_USER_ID` קבוע מ-`.env.local` שנזרם ל-`user_id` בכל Server Action/Function. כשיתווסף auth אמיתי - שורה אחת תוחלף (`process.env.DEV_USER_ID` → `auth.uid()`).
+- **auth ו-RLS - שלוש שכבות**: (1) `proxy.ts` בשורש מרענן את ה-session ומפנה אופטימית; (2) `requireUser()` מ-`lib/supabase/server.ts` הוא הגייט הסמכותי - נקרא ב-`app/(app)/layout.tsx` ובראש כל Server Action (Actions נגישות ב-POST ישיר, ה-proxy לא רואה אותן); (3) RLS ב-DB מול `auth.uid()`. `createServerClient()` ו-`requireUser()` שתיהן **async** - תמיד `await`. **אין service-role client ואין browser client** - כל שאילתה עוברת דרך anon key ונאכפת ב-RLS. ה-`.eq('user_id', userId)` בקוד נשאר כשכבת הגנה שנייה מעל ה-policy.
+- **`proxy.ts`, לא `middleware.ts`** - Next.js 16 שינה את השם. קובץ אחד בשורש.
 - **טסטים**: לוגיקה טהורה (בלי DB) - כמו מנוע החישוב וההמלצות - תמיד נבדקת ב-Vitest unit tests, לא במסכים זמניים.
 - **שפת ההמלצות שיוצאת למשתמש**: "תצפית מצב", לא פקודה (למשל "הניצול צפוי לרדת מתחת ל-X" ולא "העלה מחירים עכשיו").
 - **Tailwind classes**: תמיד strings סטטיים (lookup objects למיפוי צבע) - לא בניית class דינמית.
@@ -40,12 +41,14 @@ There is no lint script configured. TypeScript errors surface during `npm run bu
 
 ## סטטוס נוכחי
 
-DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, גרף 3 חודשים, בלוק המלצה, blur gate ל-free tier). auth אמיתי - עדיין לא התחיל, מתוכנן בסוף.
+DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, גרף 3 חודשים, בלוק המלצה, blur gate ל-free tier). auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל.
 
 ## נקודות פתוחות שחשוב לזכור
 
 - כפילות ספי צבע (50%/80%/110%) בין `lib/calculations/cockpit-helpers.ts` ל-`recommendations.ts` - טרם אוחדה למקור אמת אחד. אל תניח סנכרון בין השניים אם תיגע באחד מהם.
 - `source_deal_id` בטבלת `projects` קיים בסכמה אך לא בשימוש - "עסקה שנסגרת → פרויקט" נדחה במפורש, לא נקבע מתי ייבנה.
+- **איפוס סיסמה לא ממומש**. `/forgot-password` הוא עמוד סטטי בלבד ("פנה למנהל המערכת") - אין `resetPasswordForEmail` ואין SMTP. הוחלט מודע בזמן שיש משתמש אחד.
+- **Confirm Email חייב להישאר כבוי** ב-Supabase (Authentication → Providers → Email). `signUpAction` מצפה ל-session חוזרת ומחזיר שגיאה מפורשת אם אין - אם מדליקים את הטוגל, ההרשמה נשברת.
 
 ## תיעוד מורחב (Vault)
 

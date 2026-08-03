@@ -1,7 +1,7 @@
 'use server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
-import { createServerClient, getDevUserId } from '@/lib/supabase/server'
+import { createServerClient, requireUser } from '@/lib/supabase/server'
 
 export async function createClientAction(
   _prev: { error: string | null },
@@ -10,10 +10,11 @@ export async function createClientAction(
   const name = (formData.get('name') as string).trim()
   if (!name) return { error: 'שם לקוח הוא שדה חובה' }
 
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('clients')
-    .insert({ user_id: getDevUserId(), name })
+    .insert({ user_id: userId, name })
 
   if (error) return { error: error.message }
   redirect('/clients')
@@ -27,24 +28,26 @@ export async function updateClientAction(
   const name = (formData.get('name') as string).trim()
   if (!name) return { error: 'שם לקוח הוא שדה חובה' }
 
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('clients')
     .update({ name })
     .eq('id', id)
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
 
   if (error) return { error: error.message }
   redirect('/clients')
 }
 
 export async function deleteClientAction(id: string): Promise<void> {
-  const supabase = createServerClient()
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
   const { error } = await supabase
     .from('clients')
     .delete()
     .eq('id', id)
-    .eq('user_id', getDevUserId())
+    .eq('user_id', userId)
 
   if (error) throw new Error(error.message)
   revalidatePath('/clients')
