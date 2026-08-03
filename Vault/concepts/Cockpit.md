@@ -6,7 +6,7 @@ related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]]
 # Cockpit
 
 ## What it does
-המסך הראשי של האפליקציה. Server Component שמשיג את נתוני הניצול ל-3 חודשים קדימה ומציג: hero metric (% ניצול של החודש הבעייתי ביותר), עמודות תחזית חודשיות עם breakdown שבועי, ובלוק המלצה. משתמשי free רואים blur על העמודות וההמלצה עם CTA לשדרוג.
+המסך הראשי של האפליקציה. Server Component שמשיג את נתוני הניצול ל-3 חודשים קדימה ומציג: hero metric (% ניצול של החודש הנוכחי; אם החודש הבא בעומס יתר >110% — שניהם מוצגים זה-לצד-זה באותו גודל עם תווית לכל אחד), עמודות תחזית חודשיות עם breakdown שבועי, ובלוק המלצה. משתמשי free רואים blur על העמודות וההמלצה עם CTA לשדרוג.
 
 ## Key files
 - `app/(app)/cockpit/page.tsx` — Server Component; קורא `fetchUtilization`, מחלק לcomponents
@@ -21,9 +21,9 @@ related: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]], [[Pipeline]]
 
 **`lib/calculations/cockpit-helpers.ts`**
 - `MonthSummary` — `{ yearMonth, monthLabel, monthIndex, utilization, weeks: WeekBreakdown[] }`
-- `HeroMonth` — `{ monthIndex, monthLabel, utilization }`
+- `HeroMonth` — `{ monthIndex, monthLabel, utilization, nextMonthOverload?: { monthIndex, monthLabel, utilization } }`
 - `groupWeeksByMonth(weeks): MonthSummary[]` — ממיין weeks לחודשים, capacity-weighted utilization
-- `getHeroMonth(weeks, recommendation): HeroMonth` — מחזיר את החודש שה-recommendation מצביע עליו (fallback: חודש 1)
+- `getHeroMonth(weeks, today?): HeroMonth` — מחזיר את החודש הנוכחי לפי `today` (ברירת מחדל: `new Date()`). `nextMonthOverload` מאוכלס אם החודש הבא חורג מ-`UTILIZATION_OVERLOAD_THRESHOLD` (>110%); אינו תלוי ב-`recommendation`
 - `getStartOfCurrentWeek(today?): Date` — יום שני הנוכחי (UTC)
 - `addMonths(date, n): Date` — מוסיף n חודשים (UTC)
 - `utilizationColorClass(u): string` — Tailwind text color class לפי %
@@ -44,7 +44,7 @@ CockpitPage (Server)
       → calcWeeklyUtilization(input)                    // utilization.ts
       → calcRecommendation(weeks)                       // recommendations.ts
       → return { weeks, recommendation, plan }
-  → getHeroMonth(weeks, recommendation)                 // cockpit-helpers.ts
+  → getHeroMonth(weeks)                                 // cockpit-helpers.ts
   → groupWeeksByMonth(weeks)                            // cockpit-helpers.ts
   → <HeroMetric heroMonth={...} />
   → <ForecastBlurGate plan={plan}>
