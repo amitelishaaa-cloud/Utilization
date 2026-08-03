@@ -21,6 +21,7 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 - `ProjectStatus` — `'active' | 'completed' | 'cancelled'`
 - `Project` — `{ id, user_id, client_id, source_deal_id, name, pricing_type, estimated_hours, actual_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status, notes: string | null, priority: 'low' | 'medium' | 'high' | null, created_at, clients? }`
   - ⚠️ **`notes` ו-`priority` לא קיימות ב-DB בפועל** (אומת מול Supabase, 2026-08-03) — הצהרה בטיפוס בלבד, ללא עמודה וללא נתיב קוד. אל תכניס אותן ל-insert/update.
+  - `source_deal_id` — עסקת [[Pipeline]] שממנה נוצר הפרויקט (nullable, נוסף במיגרציה `20260803000001`)
 - `RetainerStatus` — `'active' | 'ended'`
 - `RetainerPricingType` — `'hourly' | 'fixed_monthly'`
 - `Retainer` — `{ id, user_id, client_id, source_deal_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date, status, created_at, clients? }`

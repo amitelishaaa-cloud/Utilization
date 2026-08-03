@@ -94,7 +94,13 @@ function DealRow({ deal, realized }: { deal: PipelineDeal; realized?: { href: st
             {deal.name}
           </Link>
         </td>
-        <td className="px-4 py-3 text-sm text-gray-600">{deal.clients?.name ?? '—'}</td>
+        <td className="px-4 py-3 text-sm text-gray-600">
+          {deal.clients?.name ?? (
+            <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-400">
+              לקוח יוזן בהמשך
+            </span>
+          )}
+        </td>
         <td className="px-4 py-3 text-sm text-gray-600">{stageInfo.label}</td>
         <td className="px-4 py-3 text-sm text-gray-600">{probability}%</td>
         <td className="px-4 py-3">

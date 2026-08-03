@@ -19,8 +19,7 @@ related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Cockpit]], [[Pip
 ## Key types / exports
 
 **מ-`lib/types.ts`** (ראה [[Data-Model]])
-- `Retainer` — הישות המרכזית; `end_date` יכול להיות `null` (רטיינר פתוח)
-- `source_deal_id` — עסקת [[Pipeline]] שממנה נוצר הרטיינר (nullable, נוסף במיגרציה `20260803000001` יחד עם partial unique index שמונע כפילות)
+- `Retainer` — הישות המרכזית; `end_date` יכול להיות `null` (רטיינר פתוח); `source_deal_id` — עסקת [[Pipeline]] שממנה נוצר הרטיינר (nullable, נוסף במיגרציה `20260803000001` יחד עם partial unique index שמונע כפילות)
 - `RetainerStatus` — `'active' | 'ended'`
 - `RetainerPricingType` — `'hourly' | 'fixed_monthly'`
 

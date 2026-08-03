@@ -13,8 +13,8 @@ related: [[Data-Model]], [[Utilization-Engine]], [[Clients]], [[Projects]], [[Co
 - `app/(app)/pipeline/new/page.tsx` — טופס עסקה חדשה
 - `app/(app)/pipeline/[id]/page.tsx` — עמוד עסקה בודדת; משתמש ב-`formatDate()` לפורמט `expected_start_date`, `expected_end_date`, `closed_at`; קורא `searchParams.realize` לפתיחת מודאל המימוש
 - `app/(app)/pipeline/[id]/edit/page.tsx` — עריכת עסקה
-- `app/(app)/pipeline/actions.ts` — Server Actions: create, update stage, close (won/lost), `realizeDealAction`
-- `components/pipeline/realize-deal-modal.tsx` — מודאל מימוש עסקה שנסגרה
+- `app/(app)/pipeline/actions.ts` — Server Actions: create, update stage, close (won/lost); `realizeDealAction` יוצר פרויקט/ריטיינר מעסקה שנסגרה `won`
+- `components/pipeline/realize-deal-modal.tsx` — מודאל מימוש עסקה שנסגרה; קורא ל-`buildProjectDefaults` / `buildRetainerDefaults` מ-`lib/deal-realization.ts`; נשלח ל-`realizeDealAction` עם FormData
 - `lib/deal-realization.ts` — מיפוי טהור מעסקה לערכי ברירת המחדל של פרויקט/ריטיינר
 - `lib/validation.ts` — `validateProject` / `validateRetainer`, משותפות ל-actions של [[Projects]], [[Retainers]] ו-Pipeline (אי אפשר לייצא פונקציה סינכרונית מקובץ `'use server'`)
 - `components/pipeline/deal-form.tsx` — טופס עסקה (שדות + validation); ניהול state של `expectedStartDate` + חישוב `min` תאריך סיום בהתאם
@@ -42,6 +42,17 @@ related: [[Data-Model]], [[Utilization-Engine]], [[Clients]], [[Projects]], [[Co
 ריטיינר פתוח (ללא `expected_end_date`) תורם שעות עד סוף חלון החישוב — בדיוק כמו ריטיינר אמיתי בטבלת `retainers`.
 
 בלעדיות הדדית ב-DB: `CHECK chk_deal_type_fields` — project דורש `estimated_hours IS NOT NULL AND monthly_hours IS NULL AND expected_end_date IS NOT NULL`; retainer דורש `monthly_hours IS NOT NULL AND estimated_hours IS NULL`.
+
+**`lib/deal-realization.ts`**
+- `NEW_CLIENT_VALUE` — ערך const (`'__new__'`) ל-option של יצירת לקוח חדש בטופס המודאל
+- `ProjectDefaults` — `{ client_id, name, pricing_type, estimated_hours, hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated }`
+- `RetainerDefaults` — `{ client_id, name, monthly_hours, pricing_type, hourly_rate, monthly_fixed_price, start_date, end_date }`
+- `buildProjectDefaults(deal: PipelineDeal): ProjectDefaults` — ממלא מראש ערכים של פרויקט מעסקת pipeline
+- `buildRetainerDefaults(deal: PipelineDeal): RetainerDefaults` — ממלא מראש ערכים של ריטיינר מעסקת pipeline, כולל תרגום `pricing_type: 'fixed' → 'fixed_monthly'`
+
+**`lib/validation.ts`**
+- `validateProject(data: ProjectFields): string | null` — בדיקות תקינות לשדות פרויקט; משותפת לחתימה של [[Projects]] ו-Pipeline (אי אפשר לייצא sync מ-`'use server'`)
+- `validateRetainer(data: RetainerFields): string | null` — בדיקות תקינות לשדות ריטיינר
 
 **`lib/pipeline-stages.ts`**
 - `PIPELINE_STAGES` — הסתברויות לכל שלב (ראה [[Utilization-Engine]])
