@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createServerClient, requireUser } from '@/lib/supabase/server'
 import { PIPELINE_STAGES } from '@/lib/pipeline-stages'
+import { NEW_CLIENT_VALUE } from '@/lib/deal-realization'
+import { validateProject, validateRetainer } from '@/lib/validation'
 import type { PipelineStage, DealStatus, DealType } from '@/lib/types'
 
 function parseDealForm(formData: FormData) {
@@ -148,7 +150,161 @@ export async function updateDealAction(
     })
   }
 
+  // A freshly won deal opens the realization modal — unless it was already realized
+  if (status === 'won') {
+    const realizedId = await findRealizationId(supabase, data.deal_type, id)
+    if (!realizedId) redirect(`/pipeline/${id}?realize=1`)
+  }
+
   redirect('/pipeline')
+}
+
+// ─── Deal realization (won deal → project / retainer) ───────────────────────
+
+type SupabaseClient = Awaited<ReturnType<typeof createServerClient>>
+
+const ALREADY_REALIZED = 'העסקה כבר מומשה — כבר קיים פרויקט או ריטיינר שנוצר ממנה'
+
+function targetTable(dealType: DealType) {
+  return dealType === 'project' ? 'projects' : 'retainers'
+}
+
+/** Returns the id of the project/retainer created from this deal, or null */
+async function findRealizationId(
+  supabase: SupabaseClient,
+  dealType: DealType,
+  dealId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from(targetTable(dealType))
+    .select('id')
+    .eq('source_deal_id', dealId)
+    .maybeSingle()
+
+  return data?.id ?? null
+}
+
+type ClientIntent =
+  | { kind: 'existing'; id: string }
+  | { kind: 'new'; name: string }
+
+function parseClientIntent(formData: FormData): ClientIntent | null {
+  const selected = ((formData.get('client_id') as string) ?? '').trim()
+  if (selected && selected !== NEW_CLIENT_VALUE) return { kind: 'existing', id: selected }
+
+  const name = ((formData.get('new_client_name') as string) ?? '').trim()
+  return name ? { kind: 'new', name } : null
+}
+
+async function resolveClientId(
+  supabase: SupabaseClient,
+  userId: string,
+  intent: ClientIntent,
+): Promise<{ id: string } | { error: string }> {
+  if (intent.kind === 'existing') return { id: intent.id }
+
+  const { data, error } = await supabase
+    .from('clients')
+    .insert({ user_id: userId, name: intent.name })
+    .select('id')
+    .single()
+
+  if (error || !data) return { error: error?.message ?? 'יצירת הלקוח נכשלה' }
+  return { id: data.id }
+}
+
+function parseRealizedProject(formData: FormData, client_id: string) {
+  const pricing_type = formData.get('pricing_type') as 'hourly' | 'fixed'
+  return {
+    name: ((formData.get('name') as string) ?? '').trim(),
+    client_id,
+    pricing_type,
+    estimated_hours: parseFloat(formData.get('estimated_hours') as string),
+    actual_hours: null,
+    hourly_rate:
+      pricing_type === 'hourly' ? parseFloat(formData.get('hourly_rate') as string) : null,
+    fixed_price:
+      pricing_type === 'fixed' ? parseFloat(formData.get('fixed_price') as string) : null,
+    start_date: formData.get('start_date') as string,
+    end_date: formData.get('end_date') as string,
+    is_end_date_estimated: formData.get('is_end_date_estimated') === 'on',
+    status: 'active' as const,
+  }
+}
+
+function parseRealizedRetainer(formData: FormData, client_id: string) {
+  const pricing_type = formData.get('pricing_type') as 'hourly' | 'fixed_monthly'
+  const end_date = ((formData.get('end_date') as string) ?? '').trim()
+  return {
+    name: ((formData.get('name') as string) ?? '').trim(),
+    client_id,
+    pricing_type,
+    monthly_hours: parseFloat(formData.get('monthly_hours') as string),
+    hourly_rate:
+      pricing_type === 'hourly' ? parseFloat(formData.get('hourly_rate') as string) : null,
+    monthly_fixed_price:
+      pricing_type === 'fixed_monthly'
+        ? parseFloat(formData.get('monthly_fixed_price') as string)
+        : null,
+    start_date: formData.get('start_date') as string,
+    end_date: end_date || null,
+    status: 'active' as const,
+  }
+}
+
+export async function realizeDealAction(
+  dealId: string,
+  _prev: { error: string | null },
+  formData: FormData,
+): Promise<{ error: string | null }> {
+  const { id: userId } = await requireUser()
+  const supabase = await createServerClient()
+
+  const { data: deal } = await supabase
+    .from('pipeline_deals')
+    .select('id, deal_type, status')
+    .eq('id', dealId)
+    .eq('user_id', userId)
+    .single()
+
+  if (!deal) return { error: 'העסקה לא נמצאה' }
+  if (deal.status !== 'won') return { error: 'אפשר לממש רק עסקה שנסגרה בהצלחה' }
+
+  const dealType = deal.deal_type as DealType
+  const isProject = dealType === 'project'
+
+  if (await findRealizationId(supabase, dealType, dealId)) return { error: ALREADY_REALIZED }
+
+  const clientIntent = parseClientIntent(formData)
+  if (!clientIntent) return { error: 'יש לבחור לקוח' }
+
+  // Validate before creating a new client, so a rejected form leaves no orphan client
+  const provisionalId = clientIntent.kind === 'existing' ? clientIntent.id : 'pending'
+  const projectFields = isProject ? parseRealizedProject(formData, provisionalId) : null
+  const retainerFields = isProject ? null : parseRealizedRetainer(formData, provisionalId)
+
+  const validationError = projectFields
+    ? validateProject(projectFields)
+    : validateRetainer(retainerFields!)
+  if (validationError) return { error: validationError }
+
+  const client = await resolveClientId(supabase, userId, clientIntent)
+  if ('error' in client) return { error: client.error }
+
+  const row = { client_id: client.id, user_id: userId, source_deal_id: dealId }
+  const { error: insertError } = projectFields
+    ? await supabase.from('projects').insert({ ...projectFields, ...row })
+    : await supabase.from('retainers').insert({ ...retainerFields!, ...row })
+
+  // 23505 = the partial unique index on source_deal_id — two submits raced
+  if (insertError) {
+    return { error: insertError.code === '23505' ? ALREADY_REALIZED : insertError.message }
+  }
+
+  revalidatePath('/pipeline')
+  revalidatePath('/cockpit')
+  revalidatePath(isProject ? '/projects' : '/retainers')
+  redirect(isProject ? '/projects' : '/retainers')
 }
 
 export async function deleteDealAction(id: string): Promise<void> {

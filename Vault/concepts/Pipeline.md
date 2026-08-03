@@ -11,9 +11,12 @@ related: [[Data-Model]], [[Utilization-Engine]], [[Clients]], [[Projects]], [[Co
 ## Key files
 - `app/(app)/pipeline/page.tsx` — רשימת עסקאות
 - `app/(app)/pipeline/new/page.tsx` — טופס עסקה חדשה
-- `app/(app)/pipeline/[id]/page.tsx` — עמוד עסקה בודדת; משתמש ב-`formatDate()` לפורמט `expected_start_date`, `expected_end_date`, `closed_at`
+- `app/(app)/pipeline/[id]/page.tsx` — עמוד עסקה בודדת; משתמש ב-`formatDate()` לפורמט `expected_start_date`, `expected_end_date`, `closed_at`; קורא `searchParams.realize` לפתיחת מודאל המימוש
 - `app/(app)/pipeline/[id]/edit/page.tsx` — עריכת עסקה
-- `app/(app)/pipeline/actions.ts` — Server Actions: create, update stage, close (won/lost)
+- `app/(app)/pipeline/actions.ts` — Server Actions: create, update stage, close (won/lost), `realizeDealAction`
+- `components/pipeline/realize-deal-modal.tsx` — מודאל מימוש עסקה שנסגרה
+- `lib/deal-realization.ts` — מיפוי טהור מעסקה לערכי ברירת המחדל של פרויקט/ריטיינר
+- `lib/validation.ts` — `validateProject` / `validateRetainer`, משותפות ל-actions של [[Projects]], [[Retainers]] ו-Pipeline (אי אפשר לייצא פונקציה סינכרונית מקובץ `'use server'`)
 - `components/pipeline/deal-form.tsx` — טופס עסקה (שדות + validation); ניהול state של `expectedStartDate` + חישוב `min` תאריך סיום בהתאם
 - `components/pipeline/deals-table.tsx` — טבלת עסקאות עם סטטוס + שלב
 - `components/pipeline/stage-history-timeline.tsx` — ציר זמן מעברי שלבים
@@ -57,8 +60,21 @@ related: [[Data-Model]], [[Utilization-Engine]], [[Clients]], [[Projects]], [[Co
 
 ## זרימות מרכזיות
 
-**סגירת עסקה (won):**
-`status = 'won'` → נתוני העסקה מועברים לפרויקט חדש ב-[[Projects]] (`source_deal_id` מקשר)
+**סגירת עסקה (won) ומימושה:**
+
+`updateDealAction` מזהה מעבר ל-`won` ומפנה ל-`/pipeline/[id]?realize=1` (במקום ל-`/pipeline`) — אלא אם העסקה כבר מומשה. ה-searchParam הוא שפותח את `RealizeDealModal`; אותו מסלול בדיוק משמש את כפתור "צור פרויקט"/"צור ריטיינר" בעמוד פרטי העסקה, כך שיש מנגנון אחד ולא שניים.
+
+המודאל ממולא מראש מ-`buildProjectDefaults` / `buildRetainerDefaults` ב-`lib/deal-realization.ts` (לוגיקה טהורה, נבדקת ב-`lib/__tests__/deal-realization.test.ts`), וניתן לערוך כל שדה לפני היצירה. `realizeDealAction` יוצר שורה ב-[[Projects]] או ב-[[Retainers]] לפי `deal_type`, עם `source_deal_id` שמקשר חזרה.
+
+שדות שאינם העתקה ישירה:
+- `client_id` — nullable בעסקה, NOT NULL ביעד. המודאל דורש בחירת לקוח, ומאפשר יצירת לקוח חדש בזרימה (הלקוח נוצר רק אחרי שהוולידציה עברה, כדי לא להשאיר לקוחות יתומים).
+- `pricing_type` בענף ריטיינר — `'fixed'` בעסקה מתורגם ל-`'fixed_monthly'`.
+- `monthly_fixed_price` — **לא** מועתק מ-`fixed_price`: בעסקה זה מחיר כולל, ברטיינר זה מחיר לחודש. השדה מגיע ריק עם אזהרה.
+- `is_end_date_estimated` — נשלח `true` כברירת מחדל, כי מקור התאריך הוא `expected_end_date`.
+
+**עסקה שנסגרה וטרם מומשה:** `fetcher.ts` שולף רק deals ב-`status = 'active'`, כך שעסקה `won` נושרת מיד מהחישוב המשוקלל. אם לא נוצר יעד — נוצר חור שקט בתחזית. לכן טבלת ה-Pipeline מציגה באדג' "טרם מומשה", ועמוד העסקה מציג הודעה מפורשת + כפתור להשלמה.
+
+**מניעת כפילות:** partial unique index על `source_deal_id` בשתי טבלאות היעד (מיגרציה `20260803000001`). ה-Action בודק מראש וגם תופס `23505` למקרה של שתי הגשות במקביל. הייחודיות היא פר-טבלה — `deal_type` הוא מה שקובע לאיזו טבלה לפנות.
 
 **Free-tier gate:**
 עד 3 עסקאות `active` במקביל. עסקה 4+ → modal שדרוג

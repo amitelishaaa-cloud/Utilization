@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { createServerClient, requireUser } from '@/lib/supabase/server'
+import { validateProject } from '@/lib/validation'
 
 function parseProjectForm(formData: FormData) {
   const name = (formData.get('name') as string).trim()
@@ -27,24 +28,6 @@ function parseProjectForm(formData: FormData) {
     name, client_id, pricing_type, estimated_hours, actual_hours,
     hourly_rate, fixed_price, start_date, end_date, is_end_date_estimated, status,
   }
-}
-
-function validateProject(data: ReturnType<typeof parseProjectForm>): string | null {
-  if (!data.name) return 'שם פרויקט הוא שדה חובה'
-  if (!data.client_id) return 'יש לבחור לקוח'
-  if (isNaN(data.estimated_hours) || data.estimated_hours <= 0)
-    return 'שעות מוערכות חייבות להיות מספר חיובי'
-  if (data.actual_hours !== null && data.actual_hours < 0)
-    return 'שעות בפועל לא יכולות להיות שליליות'
-  if (!data.start_date) return 'תאריך התחלה הוא שדה חובה'
-  if (!data.end_date) return 'תאריך סיום הוא שדה חובה'
-  if (new Date(data.end_date) < new Date(data.start_date))
-    return 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה'
-  if (data.pricing_type === 'hourly' && (isNaN(data.hourly_rate!) || data.hourly_rate! <= 0))
-    return 'תעריף לשעה חייב להיות מספר חיובי'
-  if (data.pricing_type === 'fixed' && (isNaN(data.fixed_price!) || data.fixed_price! <= 0))
-    return 'מחיר כולל חייב להיות מספר חיובי'
-  return null
 }
 
 export async function createProjectAction(

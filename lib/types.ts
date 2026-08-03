@@ -68,6 +68,7 @@ export type Retainer = {
   id: string
   user_id: string
   client_id: string
+  source_deal_id: string | null
   name: string
   monthly_hours: number
   pricing_type: RetainerPricingType

@@ -41,12 +41,12 @@ There is no lint script configured. TypeScript errors surface during `npm run bu
 
 ## סטטוס נוכחי
 
-DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, גרף 3 חודשים, בלוק המלצה, blur gate ל-free tier). auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל.
+DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, גרף 3 חודשים, בלוק המלצה, blur gate ל-free tier). auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל. "עסקה שנסגרת → פרויקט/ריטיינר" - הושלם (`realizeDealAction` + `RealizeDealModal`, ראה `Vault/concepts/Pipeline.md`).
 
 ## נקודות פתוחות שחשוב לזכור
 
 - כפילות ספי צבע (50%/80%/110%) בין `lib/calculations/cockpit-helpers.ts` ל-`recommendations.ts` - טרם אוחדה למקור אמת אחד. אל תניח סנכרון בין השניים אם תיגע באחד מהם.
-- `source_deal_id` בטבלת `projects` קיים בסכמה אך לא בשימוש - "עסקה שנסגרת → פרויקט" נדחה במפורש, לא נקבע מתי ייבנה.
+- **`projects.notes` ו-`projects.priority` מוצהרים ב-`lib/types.ts` אך לא קיימים ב-DB** (אומת מול Supabase). אין להם עמודה, מיגרציה, או נתיב קוד - אל תכניס אותם ל-insert/update לפני שמוסיפים מיגרציה.
 - **איפוס סיסמה לא ממומש**. `/forgot-password` הוא עמוד סטטי בלבד ("פנה למנהל המערכת") - אין `resetPasswordForEmail` ואין SMTP. הוחלט מודע בזמן שיש משתמש אחד.
 - **Confirm Email חייב להישאר כבוי** ב-Supabase (Authentication → Providers → Email). `signUpAction` מצפה ל-session חוזרת ומחזיר שגיאה מפורשת אם אין - אם מדליקים את הטוגל, ההרשמה נשברת.
 

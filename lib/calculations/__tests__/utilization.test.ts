@@ -233,6 +233,7 @@ describe('calcWeeklyUtilization', () => {
       id: 'ret-1',
       user_id: 'user-1',
       client_id: 'client-1',
+      source_deal_id: null,
       name: 'Retainer',
       monthly_hours: 43.3,
       pricing_type: 'fixed_monthly',

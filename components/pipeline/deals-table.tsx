@@ -18,7 +18,15 @@ const STATUS_COLORS: Record<DealStatus, string> = {
   lost:   'bg-gray-100 text-gray-500',
 }
 
-export default function DealsTable({ deals }: { deals: PipelineDeal[] }) {
+export type RealizedMap = Record<string, { href: string; name: string }>
+
+export default function DealsTable({
+  deals,
+  realized,
+}: {
+  deals: PipelineDeal[]
+  realized: RealizedMap
+}) {
   if (deals.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
@@ -49,7 +57,7 @@ export default function DealsTable({ deals }: { deals: PipelineDeal[] }) {
         </thead>
         <tbody>
           {deals.map((deal) => (
-            <DealRow key={deal.id} deal={deal} />
+            <DealRow key={deal.id} deal={deal} realized={realized[deal.id]} />
           ))}
         </tbody>
       </table>
@@ -57,7 +65,7 @@ export default function DealsTable({ deals }: { deals: PipelineDeal[] }) {
   )
 }
 
-function DealRow({ deal }: { deal: PipelineDeal }) {
+function DealRow({ deal, realized }: { deal: PipelineDeal; realized?: { href: string; name: string } }) {
   const [showDialog, setShowDialog] = useState(false)
   const [isPending, startTransition] = useTransition()
 
@@ -90,11 +98,23 @@ function DealRow({ deal }: { deal: PipelineDeal }) {
         <td className="px-4 py-3 text-sm text-gray-600">{stageInfo.label}</td>
         <td className="px-4 py-3 text-sm text-gray-600">{probability}%</td>
         <td className="px-4 py-3">
-          <span
-            className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[deal.status]}`}
-          >
-            {STATUS_LABELS[deal.status]}
-          </span>
+          <div className="flex flex-col items-start gap-1">
+            <span
+              className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[deal.status]}`}
+            >
+              {STATUS_LABELS[deal.status]}
+            </span>
+            {deal.status === 'won' &&
+              (realized ? (
+                <Link href={realized.href} className="text-xs text-gray-500 hover:underline">
+                  {realized.name}
+                </Link>
+              ) : (
+                <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                  טרם מומשה
+                </span>
+              ))}
+          </div>
         </td>
         <td className="px-4 py-3 text-sm text-gray-600">{pricingLabel}</td>
         <td className="px-4 py-3">

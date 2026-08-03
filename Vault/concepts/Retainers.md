@@ -1,6 +1,6 @@
 ---
 tags: [retainers, committed-work, recurring, crud]
-related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Cockpit]]
+related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Cockpit]], [[Pipeline]]
 ---
 
 # Retainers
@@ -20,6 +20,7 @@ related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Cockpit]]
 
 **מ-`lib/types.ts`** (ראה [[Data-Model]])
 - `Retainer` — הישות המרכזית; `end_date` יכול להיות `null` (רטיינר פתוח)
+- `source_deal_id` — עסקת [[Pipeline]] שממנה נוצר הרטיינר (nullable, נוסף במיגרציה `20260803000001` יחד עם partial unique index שמונע כפילות)
 - `RetainerStatus` — `'active' | 'ended'`
 - `RetainerPricingType` — `'hourly' | 'fixed_monthly'`
 
@@ -34,3 +35,4 @@ weekly_contribution = retainer.monthly_hours / 4.33
 ## Dependencies & consumers
 - תלוי ב: [[Data-Model]], [[Clients]]
 - משפיע על: [[Utilization-Engine]] — `committedHours` לכל שבוע
+- רטיינרים נוצרים גם מעסקת [[Pipeline]] מסוג `retainer` שנסגרה (won) דרך `realizeDealAction`

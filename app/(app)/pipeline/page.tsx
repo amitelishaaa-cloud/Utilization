@@ -13,6 +13,28 @@ export default async function PipelinePage() {
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
+  // Which won deals already produced a project/retainer — drives the "טרם מומשה" badge
+  const wonIds = (deals ?? []).filter((d) => d.status === 'won').map((d) => d.id)
+  const realized: Record<string, { href: string; name: string }> = {}
+
+  if (wonIds.length > 0) {
+    const [{ data: projects }, { data: retainers }] = await Promise.all([
+      supabase
+        .from('projects')
+        .select('id, name, source_deal_id')
+        .eq('user_id', userId)
+        .in('source_deal_id', wonIds),
+      supabase
+        .from('retainers')
+        .select('id, name, source_deal_id')
+        .eq('user_id', userId)
+        .in('source_deal_id', wonIds),
+    ])
+
+    for (const p of projects ?? []) realized[p.source_deal_id] = { href: `/projects/${p.id}/edit`, name: p.name }
+    for (const r of retainers ?? []) realized[r.source_deal_id] = { href: `/retainers/${r.id}/edit`, name: r.name }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
@@ -27,7 +49,7 @@ export default async function PipelinePage() {
           + עסקה חדשה
         </Link>
       </div>
-      <DealsTable deals={deals ?? []} />
+      <DealsTable deals={deals ?? []} realized={realized} />
     </div>
   )
 }

@@ -20,6 +20,7 @@ related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Pipeline]], [[Co
 
 **מ-`lib/types.ts`** (ראה [[Data-Model]])
 - `Project` — הישות המרכזית; שים לב ל-`source_deal_id` — פרויקטים שנפתחו מ-[[Pipeline]] deal
+  - ⚠️ הטיפוס מצהיר גם על `notes` ו-`priority`, אבל **העמודות האלה לא קיימות ב-DB** ולא נכתבות/נקראות באף מקום. אל תכניס אותן ל-insert.
 - `ProjectWeeklyAllocation` — `{ project_id, week_start, allocated_hours }`
 - `ProjectStatus` — `'active' | 'completed' | 'cancelled'`
 - `PricingType` — `'hourly' | 'fixed'`
@@ -39,4 +40,4 @@ related: [[Data-Model]], [[Clients]], [[Utilization-Engine]], [[Pipeline]], [[Co
 ## Dependencies & consumers
 - תלוי ב: [[Data-Model]], [[Clients]]
 - משפיע על: [[Utilization-Engine]] — `committedHours` לכל שבוע
-- פרויקטים יכולים להיווצר מ-[[Pipeline]] deal שנסגר (won)
+- פרויקטים נוצרים גם מ-[[Pipeline]] deal שנסגר (won) דרך `realizeDealAction` — `source_deal_id` מקשר חזרה, ועליו partial unique index שמונע פרויקט כפול מאותה עסקה
