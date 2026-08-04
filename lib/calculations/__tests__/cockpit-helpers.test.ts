@@ -43,16 +43,18 @@ describe('groupWeeksByMonth', () => {
   })
 
   // שבוע גבול (יום שני 31/08/2026): ראשון+שני (30-31/08) שייכים לאוגוסט,
-  // שלישי-רביעי-חמישי (1-3/09) שייכים לספטמבר. הקיבולת נפרסת 2/5 לאוגוסט
-  // ו-3/5 לספטמבר — לא מיוחסת במלואה לחודש שמכיל את מפתח יום השני.
-  it('פורסת קיבולת של שבוע גבול לפי ימי עבודה (5-יומי) בכל חודש', () => {
+  // שלישי-רביעי-חמישי (1-3/09) שייכים לספטמבר. גם קיבולת וגם שעות (committed+pipeline)
+  // נפרסות סימטרית 2/5 לאוגוסט ו-3/5 לספטמבר — לא מיוחסות במלואן לחודש שמכיל
+  // את מפתח יום השני. שעות הבחירה שונות בין השבועות כדי שהפרישה תהיה ניתנת להבחנה
+  // מהתנהגות ישנה (חלוקה אחידה הייתה מטשטשת את ההבדל).
+  it('פורסת קיבולת ושעות של שבוע גבול לפי ימי עבודה (5-יומי) בכל חודש', () => {
     const weeks: WeekBreakdown[] = [
       // שבוע מלא באוגוסט — ללא שינוי
-      { weekStart: '2026-08-24', committedHours: 20, pipelineHours: 0, capacity: 40, utilization: 0.5 },
+      { weekStart: '2026-08-24', committedHours: 30, pipelineHours: 0, capacity: 40, utilization: 0.75 },
       // שבוע גבול: 31/08 (יום שני) — ראשון 30/08, שני 31/08 (אוגוסט) | שלישי-רביעי-חמישי 1-3/09 (ספטמבר)
-      { weekStart: '2026-08-31', committedHours: 20, pipelineHours: 0, capacity: 40, utilization: 0.5 },
+      { weekStart: '2026-08-31', committedHours: 15, pipelineHours: 10, capacity: 40, utilization: 0.625 },
       // שבוע מלא בספטמבר — ללא שינוי
-      { weekStart: '2026-09-07', committedHours: 20, pipelineHours: 0, capacity: 40, utilization: 0.5 },
+      { weekStart: '2026-09-07', committedHours: 10, pipelineHours: 0, capacity: 40, utilization: 0.25 },
     ]
     const months = groupWeeksByMonth(weeks)
 
@@ -60,17 +62,19 @@ describe('groupWeeksByMonth', () => {
     const august = months.find(m => m.yearMonth === '2026-08')!
     const september = months.find(m => m.yearMonth === '2026-09')!
 
-    // אוגוסט: שבוע מלא (40) + שבוע גבול פרוס 2/5×40=16 → 56
-    expect(august.weeks).toHaveLength(2) // חברות ה-weeks לתצוגה נשארת כפי שהייתה
-
-    // ספטמבר: שבוע גבול פרוס 3/5×40=24 + שבוע מלא (40) → 64
+    // חברות ה-weeks לתצוגה (הרשימה שנפתחת בלחיצה) נשארת כפי שהייתה — לא מתפצלת
+    expect(august.weeks).toHaveLength(2)
     expect(september.weeks).toHaveLength(1)
 
-    // totalHours נשאר ללא פרואטה (החלטה מפורשת — רק קיבולת מתפרסת):
-    // אוגוסט totalHours = 20+20=40, totalCapacity=56 → utilization = 40/56
+    // אוגוסט: capacity = 40×(5/5) + 40×(2/5) = 56
+    //          hours    = 30×(5/5) + 25×(2/5) = 30+10 = 40
+    //          utilization = 40/56
     expect(august.utilization).toBeCloseTo(40 / 56, 4)
-    // ספטמבר totalHours = 20 (רק השבוע ה'שייך' לספטמבר לפי מפתח יום שני), totalCapacity=64 → 20/64
-    expect(september.utilization).toBeCloseTo(20 / 64, 4)
+
+    // ספטמבר: capacity = 40×(3/5) + 40×(5/5) = 64
+    //          hours    = 25×(3/5) + 10×(5/5) = 15+10 = 25
+    //          utilization = 25/64
+    expect(september.utilization).toBeCloseTo(25 / 64, 4)
   })
 
   it('שבוע שכולו בתוך חודש אחד לא מושפע מהפריסה — התנהגות זהה לישן', () => {

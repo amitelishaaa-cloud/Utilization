@@ -5,7 +5,7 @@ export type MonthSummary = {
   yearMonth: string    // "2026-07"
   monthLabel: string   // "יולי 2026"
   monthIndex: number   // 1-based
-  utilization: number  // capacity-weighted utilization: Σ(committed+pipeline) / Σcapacity (capacity is workday-prorated for boundary weeks, see workdaysInMonth)
+  utilization: number  // capacity-weighted utilization: Σ(committed+pipeline) / Σcapacity — both sides workday-prorated for boundary weeks, see workdaysInMonth
   weeks: WeekBreakdown[]
 }
 
@@ -60,15 +60,19 @@ export function groupWeeksByMonth(weeks: WeekBreakdown[]): MonthSummary[] {
     groups.get(key)!.push(week)
   }
   return Array.from(groups.entries()).map(([yearMonth, monthWeeks], i) => {
-    // הקיבולת נפרסת לפי ימי עבודה בפועל (ראשון–חמישי) שנופלים בחודש — לא
-    // לפי איזה חודש "מכיל" את מפתח יום השני. שבוע גבול תורם קיבולת חלקית
-    // לשני החודשים שהוא חוצה, ולכן סורקים את כל weeks (לא רק monthWeeks).
-    // totalHours נשאר ללא שינוי במכוון — מיוחס במלואו לחודש שמכיל את מפתח השבוע.
+    // גם הקיבולת וגם השעות (committed+pipeline) נפרסות סימטרית לפי ימי עבודה
+    // בפועל (ראשון–חמישי) שנופלים בחודש — לא לפי איזה חודש "מכיל" את מפתח יום
+    // השני. שבוע גבול תורם חלק יחסי לשני החודשים שהוא חוצה, ולכן סורקים את כל
+    // weeks (לא רק monthWeeks) לשני הצירים. פרישה א-סימטרית (קיבולת מפוצלת,
+    // שעות לא) הייתה מעוותת את האחוז — ראה [[Cockpit]].
     const totalCapacity = weeks.reduce((sum, w) => {
       const days = workdaysInMonth(w.weekStart, yearMonth)
       return days > 0 ? sum + w.capacity * (days / 5) : sum
     }, 0)
-    const totalHours = monthWeeks.reduce((sum, w) => sum + w.committedHours + w.pipelineHours, 0)
+    const totalHours = weeks.reduce((sum, w) => {
+      const days = workdaysInMonth(w.weekStart, yearMonth)
+      return days > 0 ? sum + (w.committedHours + w.pipelineHours) * (days / 5) : sum
+    }, 0)
     return {
       yearMonth,
       monthLabel: formatMonthLabel(yearMonth),
