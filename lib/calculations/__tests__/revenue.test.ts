@@ -18,7 +18,6 @@ import type {
 //   08-31 (חופף יום אחד → 1/7)
 // סך החלקים: 2/7 + 4 + 1/7 = 31/7 — בדיוק מספר הימים באוגוסט חלקי 7.
 
-const MONTH_WEEKS = 31 / 7
 const FIRST_WEEK_FRACTION = 2 / 7
 const LAST_WEEK_FRACTION = 1 / 7
 
@@ -195,16 +194,17 @@ describe('calcMonthlyRevenue — פרויקטים', () => {
 
 // ── ריטיינרים ───────────────────────────────────────────────────────────────
 
+// רטיינר הוא ישות חודשית: הוא מחויב פעם בחודש בסכום ידוע, ולכן תורם את
+// הסכום החודשי המלא לחודש שבו הוא פעיל — בלי פריסה לשבועות ובלי הקבוע 4.33.
 describe('calcMonthlyRevenue — ריטיינרים', () => {
-  it('ריטיינר hourly — (שעות חודשיות / 4.33) × תעריף לכל שבוע', () => {
+  it('ריטיינר hourly — שעות חודשיות × תעריף, פעם אחת לחודש', () => {
     const result = calcMonthlyRevenue(makeInput({ retainers: [makeRetainer()] }))
 
-    const perWeek = (86.6 / 4.33) * 100 // ≈ 2000
-    expect(result.total).toBeCloseTo(perWeek * MONTH_WEEKS, 4)
+    expect(result.total).toBeCloseTo(86.6 * 100, 4)
+    expect(result.retainerRevenue).toBeCloseTo(86.6 * 100, 4)
   })
 
-  // monthly_fixed_price הוא כבר סכום חודשי — אסור לפרוס אותו על אורך הריטיינר.
-  it('ריטיינר fixed_monthly — המחיר החודשי מחולק ב-4.33, לא באורך הריטיינר', () => {
+  it('ריטיינר fixed_monthly — המחיר החודשי בדיוק כפי שהוא', () => {
     const retainer = makeRetainer({
       pricing_type: 'fixed_monthly',
       hourly_rate: null,
@@ -212,13 +212,53 @@ describe('calcMonthlyRevenue — ריטיינרים', () => {
     })
     const result = calcMonthlyRevenue(makeInput({ retainers: [retainer] }))
 
-    const perWeek = 4330 / 4.33 // = 1000
-    expect(result.total).toBeCloseTo(perWeek * MONTH_WEEKS, 4)
+    expect(result.total).toBe(4330)
+  })
+
+  // העוגן של ההחלטה: אורך החודש לא משנה את תרומת הרטיינר.
+  it('אותו ריטיינר תורם אותו סכום בחודש של 31 ימים ובחודש של 28', () => {
+    const retainer = makeRetainer({
+      pricing_type: 'fixed_monthly',
+      hourly_rate: null,
+      monthly_fixed_price: 4330,
+    })
+
+    const august = calcMonthlyRevenue(makeInput({ retainers: [retainer] }))
+    const february = calcMonthlyRevenue(
+      makeInput({
+        monthStart: new Date(Date.UTC(2027, 1, 1)),
+        monthEnd: new Date(Date.UTC(2027, 1, 28)),
+        retainers: [retainer],
+      }),
+    )
+
+    expect(august.total).toBe(4330)
+    expect(february.total).toBe(4330)
+  })
+
+  it('רטיינרים מרובים מסתכמים', () => {
+    const a = makeRetainer({ id: 'r-a', monthly_hours: 10, hourly_rate: 300 })
+    const b = makeRetainer({
+      id: 'r-b',
+      pricing_type: 'fixed_monthly',
+      hourly_rate: null,
+      monthly_fixed_price: 5000,
+    })
+    const result = calcMonthlyRevenue(makeInput({ retainers: [a, b] }))
+
+    expect(result.total).toBeCloseTo(10 * 300 + 5000, 4)
   })
 
   it('ריטיינר שהסתיים לפני החודש — 0', () => {
     const ended = makeRetainer({ end_date: '2026-06-30' })
     const result = calcMonthlyRevenue(makeInput({ retainers: [ended] }))
+
+    expect(result.total).toBe(0)
+  })
+
+  it('ריטיינר שמתחיל אחרי סוף החודש — 0', () => {
+    const future = makeRetainer({ start_date: '2026-09-01' })
+    const result = calcMonthlyRevenue(makeInput({ retainers: [future] }))
 
     expect(result.total).toBe(0)
   })
@@ -254,24 +294,24 @@ describe('calcMonthlyRevenue — עסקאות pipeline', () => {
     expect(result.total).toBeCloseTo(4 * (12000 / dealWeeks) * 0.55, 4)
   })
 
-  it('עסקת ריטיינר hourly — (שעות חודשיות / 4.33) × תעריף × הסתברות', () => {
+  // עסקת ריטיינר היא ישות חודשית בדיוק כמו רטיינר מחויב — הסכום החודשי
+  // המלא, משוקלל בהסתברות השלב, בלי פריסה לשבועות.
+  it('עסקת ריטיינר hourly — שעות חודשיות × תעריף × הסתברות, פעם אחת לחודש', () => {
     const deal = makeDeal({
       deal_type: 'retainer',
       estimated_hours: null,
       monthly_hours: 86.6,
       expected_start_date: '2026-08-01',
       expected_end_date: null,
-      current_stage: 'contract', // 1.0
+      current_stage: 'negotiation', // 0.55
     })
     const result = calcMonthlyRevenue(makeInput({ deals: [deal] }))
 
-    const perWeek = (86.6 / 4.33) * 100
-    expect(result.total).toBeCloseTo(perWeek * MONTH_WEEKS, 4)
+    expect(result.total).toBeCloseTo(86.6 * 100 * 0.55, 4)
   })
 
-  // הנחה A1: ב-deal_type='retainer', fixed_price הוא סכום חודשי —
-  // במקביל מדויק ל-monthly_hours שהמנוע כבר מחלק ב-4.33 לאותה שורת עסקה.
-  it('עסקת ריטיינר fixed — fixed_price מטופל כסכום חודשי (הנחה A1)', () => {
+  // הנחה A1: ב-deal_type='retainer', fixed_price הוא סכום חודשי.
+  it('עסקת ריטיינר fixed — fixed_price הוא הסכום החודשי (הנחה A1)', () => {
     const deal = makeDeal({
       deal_type: 'retainer',
       estimated_hours: null,
@@ -285,8 +325,21 @@ describe('calcMonthlyRevenue — עסקאות pipeline', () => {
     })
     const result = calcMonthlyRevenue(makeInput({ deals: [deal] }))
 
-    const perWeek = 4330 / 4.33 // = 1000 — לא נפרס על אורך העסקה
-    expect(result.total).toBeCloseTo(perWeek * MONTH_WEEKS, 4)
+    expect(result.total).toBe(4330)
+  })
+
+  it('עסקת ריטיינר שהסתיימה לפני החודש — 0', () => {
+    const deal = makeDeal({
+      deal_type: 'retainer',
+      estimated_hours: null,
+      monthly_hours: 86.6,
+      expected_start_date: '2026-05-01',
+      expected_end_date: '2026-07-15',
+      current_stage: 'contract',
+    })
+    const result = calcMonthlyRevenue(makeInput({ deals: [deal] }))
+
+    expect(result.total).toBe(0)
   })
 
   it('probability_override גובר על הסתברות השלב', () => {
@@ -383,14 +436,14 @@ describe('calcMonthlyRevenue — גבולות החודש', () => {
       }),
     )
 
-    const sum = result.weeks.reduce((acc, w) => acc + w.total, 0)
-    expect(result.total).toBeCloseTo(sum, 6)
-
-    const bySource = result.weeks.reduce(
-      (acc, w) => acc + (w.projectRevenue + w.retainerRevenue + w.pipelineRevenue) * w.monthFraction,
-      0,
+    expect(result.total).toBeCloseTo(
+      result.projectRevenue + result.retainerRevenue + result.pipelineRevenue,
+      6,
     )
-    expect(result.total).toBeCloseTo(bySource, 6)
+
+    // מה שנפרס שבועית (פרויקטים + עסקאות פרויקט) חייב להסתכם מהשבועות
+    const weekly = result.weeks.reduce((acc, w) => acc + w.total, 0)
+    expect(result.projectRevenue + result.pipelineRevenue).toBeCloseTo(weekly, 6)
   })
 
   it('פברואר בשנה מעוברת — הטווח מסתיים ב-29 בחודש', () => {
@@ -403,7 +456,7 @@ describe('calcMonthlyRevenue — גבולות החודש', () => {
     )
 
     expect(result.yearMonth).toBe('2028-02')
-    expect(result.total).toBeCloseTo(1000 * (29 / 7), 4)
+    expect(result.total).toBe(4330)
   })
 })
 

@@ -12,7 +12,9 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 - `lib/calculations/types.ts` — types של המנוע
 - `lib/calculations/utilization.ts` — חישוב שבועי
 - `lib/calculations/recommendations.ts` — לוגיקת המלצות rule-based
-- `lib/calculations/fetcher.ts` — שכבת ה-DB המחברת את המנוע לSupabase
+- `lib/calculations/fetcher.ts` — שכבת ה-DB המחברת את מנוע הניצול לSupabase
+- `lib/calculations/revenue.ts` — חישוב הכנסה חודשי (מנוע טהור)
+- `lib/calculations/revenue-fetcher.ts` — שכבת ה-DB המחברת את מנוע ההכנסה לSupabase
 - `lib/pipeline-stages.ts` — הסתברויות ברירת מחדל לשלבים (ראה [[Data-Model]])
 - `lib/calculations/thresholds.ts` — ספי ניצול (single source of truth): `UTILIZATION_LOW_THRESHOLD` (0.5), `UTILIZATION_HIGH_THRESHOLD` (0.8), `UTILIZATION_SUSTAINED_THRESHOLD` (0.9), `UTILIZATION_OVERLOAD_THRESHOLD` (1.1)
 
@@ -37,6 +39,16 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 **`lib/calculations/fetcher.ts`**
 - `fetchUtilization(userId, startDate, endDate): Promise<UtilizationFetchResult>`
 - `UtilizationFetchResult` — `{ weeks: WeekBreakdown[], recommendation: RecommendationResult, plan: 'free'|'pro' }`
+
+**`lib/calculations/revenue.ts`**
+- `calcMonthlyRevenue(input: RevenueInput): MonthRevenue` — pure calculation of revenue for a calendar month
+- `RevenueInput` — `{ monthStart, monthEnd, projects, allocations, retainers, deals }`
+- `MonthRevenue` — `{ yearMonth, monthLabel, total, weeks: WeekRevenue[] }`
+- `WeekRevenue` — `{ weekStart, monthFraction, projectRevenue, retainerRevenue, pipelineRevenue, total }`
+
+**`lib/calculations/revenue-fetcher.ts`**
+- `fetchMonthlyRevenue(userId, today): Promise<MonthRevenue>` — fetch and compute revenue for calendar month
+- `getMonthBounds(today): { monthStart, monthEnd }` — calendar month boundaries
 
 ## לוגיקת חישוב
 

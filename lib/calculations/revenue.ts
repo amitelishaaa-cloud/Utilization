@@ -12,9 +12,6 @@ import { formatMonthLabel } from './cockpit-helpers'
  * חודש קלנדרי מלא, מול חלון ה-3 חודשים קדימה של המנוע.
  */
 
-/** מקביל ל-4.33 שמנוע הניצול משתמש בו לפריסת ישויות חודשיות לשבועות. */
-const WEEKS_PER_MONTH = 4.33
-
 const MS_PER_DAY = 24 * 60 * 60 * 1000
 const MS_PER_WEEK = 7 * MS_PER_DAY
 
@@ -27,18 +24,21 @@ export type RevenueInput = {
   deals: PipelineDeal[]
 }
 
+/** פירוק שבועי — רק למקורות שנפרסים על ציר הזמן (פרויקטים ועסקאות פרויקט). */
 export type WeekRevenue = {
   weekStart: string        // ISO date YYYY-MM-DD, תמיד יום שני
   monthFraction: number    // 0..1 — חלק השבוע שנופל בתוך החודש הקלנדרי
   projectRevenue: number   // תרומה שבועית מלאה, לפני monthFraction
-  retainerRevenue: number
-  pipelineRevenue: number  // כבר משוקללת בהסתברות השלב
-  total: number            // (project + retainer + pipeline) × monthFraction
+  pipelineRevenue: number  // עסקאות פרויקט, כבר משוקללות בהסתברות
+  total: number            // (project + pipeline) × monthFraction
 }
 
 export type MonthRevenue = {
-  yearMonth: string        // "2026-08"
-  monthLabel: string       // "אוגוסט 2026"
+  yearMonth: string          // "2026-08"
+  monthLabel: string         // "אוגוסט 2026"
+  projectRevenue: number     // פרויקטים — נפרסים שבועית
+  retainerRevenue: number    // רטיינרים — הסכום החודשי המלא
+  pipelineRevenue: number    // עסקאות — פרויקט נפרס שבועית, ריטיינר חודשי; שניהם משוקללים
   total: number
   weeks: WeekRevenue[]
 }
@@ -102,28 +102,72 @@ function projectRevenueForWeek(
   return revenue
 }
 
-function retainerRevenueForWeek(weekStart: Date, retainers: Retainer[]): number {
+/** האם הישות פעילה בנקודה כלשהי בתוך החודש הקלנדרי. */
+function activeInMonth(
+  startDate: string,
+  endDate: string | null,
+  monthStart: Date,
+  monthEnd: Date,
+): boolean {
+  if (parseDate(startDate).getTime() > monthEnd.getTime()) return false
+  if (endDate && parseDate(endDate).getTime() < monthStart.getTime()) return false
+  return true
+}
+
+/**
+ * רטיינר הוא ישות חודשית: הוא מחויב פעם בחודש בסכום ידוע, ולכן תורם את
+ * הסכום החודשי המלא לכל חודש שבו הוא פעיל. אין פריסה לשבועות ואין קבוע 4.33 —
+ * אורך החודש לא משנה את הסכום.
+ */
+function retainerRevenueForMonth(
+  retainers: Retainer[],
+  monthStart: Date,
+  monthEnd: Date,
+): number {
   let revenue = 0
 
   for (const r of retainers) {
     if (r.status !== 'active') continue
-    const rStart = parseDate(r.start_date)
-    const rEnd = r.end_date ? parseDate(r.end_date) : null
-    if (weekStart.getTime() < rStart.getTime()) continue
-    if (rEnd && weekStart.getTime() > rEnd.getTime()) continue
+    if (!activeInMonth(r.start_date, r.end_date, monthStart, monthEnd)) continue
 
-    if (r.pricing_type === 'fixed_monthly') {
-      // monthly_fixed_price הוא כבר סכום חודשי — נפרס לשבועות, לא לאורך הריטיינר
-      revenue += (r.monthly_fixed_price ?? 0) / WEEKS_PER_MONTH
-    } else {
-      revenue += (r.monthly_hours / WEEKS_PER_MONTH) * (r.hourly_rate ?? 0)
-    }
+    revenue +=
+      r.pricing_type === 'fixed_monthly'
+        ? (r.monthly_fixed_price ?? 0)
+        : r.monthly_hours * (r.hourly_rate ?? 0)
   }
 
   return revenue
 }
 
-function pipelineRevenueForWeek(weekStart: Date, deals: PipelineDeal[]): number {
+/** עסקאות ריטיינר — אותה סמנטיקה חודשית, משוקללת בהסתברות השלב. */
+function pipelineRetainerRevenueForMonth(
+  deals: PipelineDeal[],
+  monthStart: Date,
+  monthEnd: Date,
+): number {
+  let revenue = 0
+
+  for (const d of deals) {
+    if (d.status !== 'active') continue
+    if (d.deal_type !== 'retainer') continue
+    if (!activeInMonth(d.expected_start_date, d.expected_end_date, monthStart, monthEnd)) continue
+
+    const probability = d.probability_override ?? PIPELINE_STAGES[d.current_stage].probability
+
+    // הנחה A1: ב-deal_type='retainer', fixed_price הוא הסכום החודשי
+    const monthly =
+      d.pricing_type === 'fixed'
+        ? (d.fixed_price ?? 0)
+        : (d.monthly_hours ?? 0) * (d.hourly_rate ?? 0)
+
+    revenue += monthly * probability
+  }
+
+  return revenue
+}
+
+/** עסקאות מסוג פרויקט בלבד — עסקאות ריטיינר מטופלות ברמה החודשית. */
+function pipelineProjectRevenueForWeek(weekStart: Date, deals: PipelineDeal[]): number {
   const weekEnd = new Date(weekStart)
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
 
@@ -131,64 +175,65 @@ function pipelineRevenueForWeek(weekStart: Date, deals: PipelineDeal[]): number 
 
   for (const d of deals) {
     if (d.status !== 'active') continue
+    if (d.deal_type === 'retainer') continue
+
     const dStart = parseDate(d.expected_start_date)
     if (dStart.getTime() > weekEnd.getTime()) continue
+    const dEnd = parseDate(d.expected_end_date!)
+    if (dEnd.getTime() < weekStart.getTime()) continue
+
+    const dealWeeks = entityWeeks(d.expected_start_date, d.expected_end_date!)
+    if (dealWeeks === 0) continue
 
     const probability = d.probability_override ?? PIPELINE_STAGES[d.current_stage].probability
+    const weekly =
+      d.pricing_type === 'fixed'
+        ? (d.fixed_price ?? 0) / dealWeeks
+        : ((d.estimated_hours ?? 0) / dealWeeks) * (d.hourly_rate ?? 0)
 
-    if (d.deal_type === 'retainer') {
-      // אין end_date → תורם עד סוף הטווח, מראה אחיד עם מנוע הניצול
-      const dEnd = d.expected_end_date ? parseDate(d.expected_end_date) : null
-      if (dEnd && dEnd.getTime() < weekStart.getTime()) continue
-
-      // הנחה A1: ב-deal_type='retainer', fixed_price הוא סכום חודשי —
-      // במקביל ל-monthly_hours שהמנוע כבר מחלק ב-4.33 לאותה שורת עסקה
-      const weekly =
-        d.pricing_type === 'fixed'
-          ? (d.fixed_price ?? 0) / WEEKS_PER_MONTH
-          : ((d.monthly_hours ?? 0) / WEEKS_PER_MONTH) * (d.hourly_rate ?? 0)
-      revenue += weekly * probability
-    } else {
-      const dEnd = parseDate(d.expected_end_date!)
-      if (dEnd.getTime() < weekStart.getTime()) continue
-
-      const dealWeeks = entityWeeks(d.expected_start_date, d.expected_end_date!)
-      if (dealWeeks === 0) continue
-
-      const weekly =
-        d.pricing_type === 'fixed'
-          ? (d.fixed_price ?? 0) / dealWeeks
-          : ((d.estimated_hours ?? 0) / dealWeeks) * (d.hourly_rate ?? 0)
-      revenue += weekly * probability
-    }
+    revenue += weekly * probability
   }
 
   return revenue
 }
 
 export function calcMonthlyRevenue(input: RevenueInput): MonthRevenue {
+  // מקורות שנפרסים על ציר הזמן — פרויקטים ועסקאות פרויקט
   const weeks = getWeeksInRange(input.monthStart, input.monthEnd).map<WeekRevenue>(weekStart => {
     const monthFraction = monthFractionForWeek(weekStart, input.monthStart, input.monthEnd)
     const projectRevenue = projectRevenueForWeek(weekStart, input.projects, input.allocations)
-    const retainerRevenue = retainerRevenueForWeek(weekStart, input.retainers)
-    const pipelineRevenue = pipelineRevenueForWeek(weekStart, input.deals)
+    const pipelineRevenue = pipelineProjectRevenueForWeek(weekStart, input.deals)
 
     return {
       weekStart: toDateStr(weekStart),
       monthFraction,
       projectRevenue,
-      retainerRevenue,
       pipelineRevenue,
-      total: (projectRevenue + retainerRevenue + pipelineRevenue) * monthFraction,
+      total: (projectRevenue + pipelineRevenue) * monthFraction,
     }
   })
+
+  // מקורות חודשיים — רטיינרים ועסקאות ריטיינר
+  const retainerRevenue = retainerRevenueForMonth(input.retainers, input.monthStart, input.monthEnd)
+  const pipelineRetainerRevenue = pipelineRetainerRevenueForMonth(
+    input.deals,
+    input.monthStart,
+    input.monthEnd,
+  )
+
+  const projectRevenue = weeks.reduce((sum, w) => sum + w.projectRevenue * w.monthFraction, 0)
+  const pipelineRevenue =
+    weeks.reduce((sum, w) => sum + w.pipelineRevenue * w.monthFraction, 0) + pipelineRetainerRevenue
 
   const yearMonth = toDateStr(input.monthStart).slice(0, 7)
 
   return {
     yearMonth,
     monthLabel: formatMonthLabel(yearMonth),
-    total: weeks.reduce((sum, w) => sum + w.total, 0),
+    projectRevenue,
+    retainerRevenue,
+    pipelineRevenue,
+    total: projectRevenue + retainerRevenue + pipelineRevenue,
     weeks,
   }
 }
