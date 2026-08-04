@@ -41,7 +41,7 @@ There is no lint script configured. TypeScript errors surface during `npm run bu
 
 ## סטטוס נוכחי
 
-DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, הכנסה צפויה לחודש, גרף 3 חודשים, טבלת פירוק שבועי מלאה, בלוק המלצה, blur gate ל-free tier). מסך `/settings` לעריכת `default_weekly_hours` ו-`works_friday`. auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל. "עסקה שנסגרת → פרויקט/ריטיינר" - הושלם (`realizeDealAction` + `RealizeDealModal`, ראה `Vault/concepts/Pipeline.md`).
+DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, הכנסה צפויה לחודש, גרף 3 חודשים עם פירוט שבועי ראשון–חמישי, בלוק המלצה, blur gate ל-free tier). מסך `/settings` לעריכת `default_weekly_hours` ו-`works_friday`. auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל. "עסקה שנסגרת → פרויקט/ריטיינר" - הושלם (`realizeDealAction` + `RealizeDealModal`, ראה `Vault/concepts/Pipeline.md`).
 
 ## נקודות פתוחות שחשוב לזכור
 

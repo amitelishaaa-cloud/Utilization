@@ -22,7 +22,7 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 
 **`lib/calculations/types.ts`**
 - `WeekBreakdown` — `{ weekStart: string, committedHours, pipelineHours, capacity, utilization }`
-- `UtilizationInput` — `{ defaultWeeklyHours, startDate, endDate, projects, allocations, retainers, deals, capacityExceptions }`
+- `UtilizationInput` — `{ defaultWeeklyHours, worksFriday, startDate, endDate, projects, allocations, retainers, deals, capacityExceptions }`
 - `RecommendationTag` — `'overload' | 'optimal' | 'warning' | 'urgent_gap' | 'mid_gap' | 'far_gap' | 'sustained_high'`
 - `RecommendationResult` — `{ tag, color, text, affectedMonthIndex: number|null, affectedMonthUtilization: number|null }`
 
@@ -45,7 +45,7 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 ## לוגיקת חישוב
 
 ```
-capacity(week)   = capacity_exceptions.available_hours OR (users.default_weekly_hours + (works_friday ? 4 : 0))
+capacity(week)   = capacity_exceptions.available_hours OR (users.default_weekly_hours + (input.worksFriday ? 4 : 0))
 committed(week)  = Σ project_weekly_allocations OR (estimated_hours × ימי_חפיפה_עם_השבוע / סך_ימי_הפרויקט)
                  + Σ retainer.monthly_hours / 4.33
 pipeline(week)   = Σ (deal.estimated_hours × ימי_חפיפה / סך_ימי_העסקה) × stage_probability  # deal_type='project'

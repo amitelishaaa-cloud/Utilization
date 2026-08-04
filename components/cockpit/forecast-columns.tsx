@@ -3,7 +3,21 @@
 import { useState } from 'react'
 import { utilizationBarColorClass } from '@/lib/calculations/cockpit-helpers'
 import type { MonthSummary } from '@/lib/calculations/cockpit-helpers'
+import { parseDate, toDateStr } from '@/lib/calculations/utilization'
 import { formatDate } from '@/lib/utils'
+
+/**
+ * מציג את שבוע העבודה (ראשון–חמישי) המקביל למפתח השבוע השמור (יום שני).
+ * "יום שני" הוא רק מפתח האיסוף הפנימי של המנוע — ראשון הוא היום שלפניו,
+ * חמישי הוא שלושה ימים אחריו. לא משנה את החישוב, רק את התווית המוצגת.
+ */
+function workWeekLabel(weekStart: string): string {
+  const sunday = parseDate(weekStart)
+  sunday.setUTCDate(sunday.getUTCDate() - 1)
+  const thursday = parseDate(weekStart)
+  thursday.setUTCDate(thursday.getUTCDate() + 3)
+  return `${formatDate(toDateStr(sunday))}–${formatDate(toDateStr(thursday))}`
+}
 
 export function ForecastColumns({ months }: { months: MonthSummary[] }) {
   const [activeIdx, setActiveIdx] = useState<number | null>(null)
@@ -64,7 +78,7 @@ export function ForecastColumns({ months }: { months: MonthSummary[] }) {
                 key={week.weekStart}
                 className="flex justify-between text-xs text-gray-600"
               >
-                <span>{formatDate(week.weekStart)}</span>
+                <span>{workWeekLabel(week.weekStart)}</span>
                 <span>{Math.round(week.utilization * 100)}%</span>
               </div>
             ))}

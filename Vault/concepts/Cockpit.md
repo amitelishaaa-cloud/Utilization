@@ -15,10 +15,9 @@ related: [[Utilization-Engine]], [[Revenue-Forecast]], [[Data-Model]], [[UI-Comp
 - `lib/calculations/revenue-fetcher.ts` — `fetchMonthlyRevenue()`: שליפה עצמאית → `MonthRevenue` (ראה [[Revenue-Forecast]])
 - `components/cockpit/hero-metric.tsx` — מציג את ה-% הגדול + תווית חודש; prop `revenue?: ReactNode` מוסיף עמודה נלווית
 - `components/cockpit/revenue-metric.tsx` — הכנסה צפויה לחודש הקלנדרי + בלור free tier inline
-- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות); תאריכי שבועות מעוצבים דרך `formatDate()` (DD/MM/YYYY)
-- `components/cockpit/weekly-table.tsx` — טבלת פירוק שבועי מלאה (כל שבועות `weeks`, לא רק החודש הפעיל): תאריכי התחלה–סיום, קיבולת, שעות מחויבות, שעות pipeline, סה"כ, ניצול. אותו נתון `weeks` שמזין את `HeroMetric` ו-`ForecastColumns` — לא שליפה נפרדת
+- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות); כל שבוע בפירוט מוצג כטווח **ראשון–חמישי** (`workWeekLabel()`: ראשון = יום לפני מפתח השבוע השמור, חמישי = 3 ימים אחריו — תווית בלבד, לא משנה את `week_start` השמור או את החישוב) דרך `formatDate()` (DD/MM/YYYY)
 - `components/cockpit/recommendation-block.tsx` — תג צבעוני + טקסט המלצה
-- `components/cockpit/forecast-blur-gate.tsx` — עוטף עמודות+טבלה שבועית+המלצה; blur לfree + CTA
+- `components/cockpit/forecast-blur-gate.tsx` — עוטף עמודות+המלצה; blur לfree + CTA
 
 ## Key types / exports
 
@@ -59,7 +58,6 @@ CockpitPage (Server)
       revenue={<RevenueMetric revenue={...} plan={plan} />} />
   → <ForecastBlurGate plan={plan}>
       <ForecastColumns months={...} />
-      <WeeklyTable weeks={...} />
       <RecommendationBlock recommendation={...} />
     </ForecastBlurGate>
 ```
@@ -69,8 +67,15 @@ CockpitPage (Server)
 ## Free-tier gate
 `users.plan === 'free'` → `ForecastBlurGate` מציג blur CSS על הילדים + CTA "שדרג לפרו לראות את התחזית המלאה". `RevenueMetric` מיישם בלור inline משלו (בלי CTA כפול) — ראה [[Revenue-Forecast]].
 
+## שבוע העבודה — ראשון–חמישי מול מפתח יום שני
+
+`week_start` השמור (DB, `WeekBreakdown.weekStart`) הוא תמיד יום שני — נורמליזציה טכנית של המנוע (ראה [[Utilization-Engine]]), לא הנחה על ימי עבודה. ה-UI **בלבד** ממיר זאת לתצוגת שבוע עבודה ישראלי: `ForecastColumns.workWeekLabel()` מציג ראשון (יום לפני ה-Monday השמור) עד חמישי (3 ימים אחריו). זו תווית תצוגה גרידא — לא נוגעת ב-`week_start` עצמו, ב-DB, או בשום חישוב.
+
 ## מסך הגדרות (`/settings`)
+
 `app/(app)/settings/page.tsx` + `components/settings/settings-form.tsx` + `app/(app)/settings/actions.ts` (`updateSettingsAction`). עורך `users.default_weekly_hours` ו-`users.works_friday` — שני השדות שמזינים את `capacity(week)` במנוע הניצול (ראה [[Utilization-Engine]], [[Data-Model]]). לא היה להם UI לפני כן. קישור בניווט ב-`app/(app)/layout.tsx`.
+
+מיגרציה `20260804000001_works_friday.sql` הוסיפה את העמודה `users.works_friday` כ-boolean עם default `false`. **עדיין ממתינה להפעלה ידנית** בSQL Editor של Supabase.
 
 ## Dependencies & consumers
 - תלוי ב: [[Utilization-Engine]], [[Data-Model]], [[UI-Components]]
