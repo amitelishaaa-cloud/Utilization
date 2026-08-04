@@ -40,32 +40,23 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 - `fetchUtilization(userId, startDate, endDate): Promise<UtilizationFetchResult>`
 - `UtilizationFetchResult` — `{ weeks: WeekBreakdown[], recommendation: RecommendationResult, plan: 'free'|'pro' }`
 
-**`lib/calculations/revenue.ts`**
-- `calcMonthlyRevenue(input: RevenueInput): MonthRevenue` — pure calculation of revenue for a calendar month
-- `RevenueInput` — `{ monthStart, monthEnd, projects, allocations, retainers, deals }`
-- `MonthRevenue` — `{ yearMonth, monthLabel, projectRevenue, retainerRevenue, pipelineRevenue, total, weeks: WeekRevenue[] }`
-- `WeekRevenue` — `{ weekStart, monthFraction, projectRevenue, pipelineRevenue, total }` — weekly breakdown (retainers are monthly-level only)
-
-**`lib/calculations/revenue-fetcher.ts`**
-- `fetchMonthlyRevenue(userId, today): Promise<MonthRevenue>` — fetch and compute revenue for calendar month
-- `getMonthBounds(today): { monthStart, monthEnd }` — calendar month boundaries
+> חישוב ההכנסה חי ב-`lib/calculations/revenue.ts` ו-`revenue-fetcher.ts` ומתועד במלואו ב-[[Revenue-Forecast]] — כולל הנוסחה, החלטות A1/A2, וההבדל בין החלונות. הוא מבודד ממנוע הניצול: הזרימה חד-כיוונית.
 
 ## לוגיקת חישוב
 
 ```
 capacity(week)   = capacity_exceptions.available_hours OR users.default_weekly_hours
-committed(week)  = Σ project_weekly_allocations OR (estimated_hours / total_weeks)
-                 + Σ retainer.monthly_hours                                        # monthly entities, no division
-pipeline(week)   = Σ (deal.estimated_hours / deal_weeks) × stage_probability        # deal_type='project'
-                 + Σ deal.monthly_hours × stage_probability                         # deal_type='retainer', monthly semantics
+committed(week)  = Σ project_weekly_allocations OR (estimated_hours × ימי_חפיפה_עם_השבוע / סך_ימי_הפרויקט)
+                 + Σ retainer.monthly_hours / 4.33
+pipeline(week)   = Σ (deal.estimated_hours × ימי_חפיפה / סך_ימי_העסקה) × stage_probability  # deal_type='project'
+                 + Σ (deal.monthly_hours / 4.33) × stage_probability                        # deal_type='retainer'
                  # ריטיינר פתוח (no expected_end_date): תורם עד סוף חלון החישוב
 utilization      = (committed + pipeline) / capacity
-
-revenue(month)   = Σ project_weekly_revenue × weekly_month_fraction
-                 + Σ retainer.monthly_amount                                       # full monthly amount per active month
-                 + Σ pipeline_project_revenue × weekly_month_fraction × stage_probability
-                 + Σ pipeline_retainer_monthly_amount × stage_probability
 ```
+
+> **חלוקת שעות הפרויקטים היא לפי ימים** (כולל שני הקצוות), לא לפי תעריף שבועי. הנוסחה הקודמת חילקה ב-`(end − start)/7`, שמחזיר פחות שבועות ממספר השבועות הקלנדריים שהפרויקט חופף להם בכל פעם שאורכו אינו כפולה שלמה של שבוע — וכל שבוע חופף קיבל תעריף שבועי מלא. פרויקט של 75 שעות מ-01/08/2026 עד 30/08 קיבל כך **90.5 שעות, ניפוח של 21%**. כעת סכום השעות על פני כל שבועות הפרויקט שווה בדיוק ל-`estimated_hours`, ויש טסטים שמעגנים זאת.
+>
+> **רטיינרים ממשיכים להתפרס ב-`/4.33`, וזה מכוון.** בניצול השאלה היא כמה שעות הרטיינר צורך בשבוע טיפוסי מול הקיבולת השבועית — עומס מתמשך, לא סכום חד-פעמי. זה שונה מחישוב ההכנסה, שבו רטיינר הוא ישות חודשית שתורמת את מלוא סכומה פעם בחודש. ראה [[Revenue-Forecast]].
 
 ## לוגיקת המלצות (priority order)
 

@@ -38,37 +38,45 @@ related: [[Cockpit]], [[Utilization-Engine]], [[Data-Model]], [[Pipeline]], [[Pr
 
 ## לוגיקת חישוב
 
+שני סוגי מקורות, עם סמנטיקה שונה:
+
+**מקורות עם טווח תאריכים — פריסה לפי ימים**
+
 ```
-לכל שבוע בטווח [יום שני של השבוע שמכיל את ה-1, יום שני של השבוע שמכיל את היום האחרון]:
+value(project) = pricing_type 'fixed' → fixed_price
+                 pricing_type 'hourly' → estimated_hours × hourly_rate
 
-  project(week)   = pricing_type 'fixed'  → fixed_price / projectWeeks
-                    pricing_type 'hourly' → hoursThisWeek × hourly_rate
-                    # hoursThisWeek = project_weekly_allocations OR estimated_hours / projectWeeks
-
-  retainer(week)  = pricing_type 'fixed_monthly' → monthly_fixed_price / 4.33
-                    pricing_type 'hourly'        → (monthly_hours / 4.33) × hourly_rate
-
-  pipeline(week)  = deal_type 'project'  → (fixed_price / dealWeeks  |  estimated_hours / dealWeeks × hourly_rate) × p
-                    deal_type 'retainer' → (fixed_price / 4.33       |  monthly_hours / 4.33 × hourly_rate)        × p
-                    # p = probability_override ?? PIPELINE_STAGES[stage].probability
-
-  total(week)     = (project + retainer + pipeline) × monthFraction
-
-total = Σ total(week)
+revenue = value × (ימי הישות שבתוך החודש / סך ימי הישות)
 ```
 
-- `projectWeeks` / `dealWeeks` = `(end − start) / 7 ימים` — **אורך הישות המלא**, לא החלק שבתוך החודש. פרויקט של 10 שבועות שרק 4 מהם בחודש תורם `4 × (fixed_price / 10)`.
+ימים נספרים **כולל שני הקצוות**. פרויקט בן יום אחד = יום אחד. אם קיימות שורות `project_weekly_allocations` לפרויקט שעתי, הן גוברות: `allocated_hours × hourly_rate × (ימי השבוע שבחודש / 7)`.
+
+עסקאות `deal_type='project'` — אותו חישוב, מוכפל ב-`p = probability_override ?? PIPELINE_STAGES[stage].probability`.
+
+**מקורות חודשיים — הסכום המלא, פעם אחת**
+
+```
+retainer = pricing_type 'fixed_monthly' → monthly_fixed_price
+           pricing_type 'hourly'        → monthly_hours × hourly_rate
+
+עסקת retainer = אותו סכום × p
+```
+
+רטיינר פעיל בחודש תורם את מלוא סכומו. **אין חלוקה ב-4.33 ואין פריסה לשבועות** — אורך החודש לא משנה את הסכום. רטיינר מחויב פעם בחודש בסכום ידוע; זו לא ישות שנפרסת על ציר זמן.
+
 - **אין `capacity`** בחישוב — להכנסה אין מכנה. `capacity_exceptions` ו-`default_weekly_hours` לא נשלפים כלל.
-- **guard חלוקה באפס:** `chk_end_after_start` מתיר `end_date = start_date`. ישות כזו תורמת 0 (המנוע הקיים מחזיר `Infinity` באותו מקרה — לא נוגעים בו, רק לא יורשים אותו).
+- **סכום התרומות של ישות על פני כל חודשיה שווה בדיוק לערכה** — לא פחות ולא יותר. מעוגן בטסט.
+
+> **למה לא פריסה לפי תעריף שבועי.** הגרסה הראשונה חילקה ב-`(end − start)/7` וכפלה בתעריף שבועי. זה מחזיר פחות שבועות ממספר השבועות הקלנדריים שהישות חופפת להם בכל פעם שאורכה אינו כפולה שלמה של שבוע, וכל שבוע חופף קיבל תעריף מלא. פרויקט של 75 שעות מ-01/08/2026 עד 30/08 קיבל 77.59 שעות — יותר מהפרויקט כולו. אותו באג היה במנוע הניצול ותוקן שם באותו אופן (ראה [[Utilization-Engine]]).
 
 ## החלטות מתועדות
 
 **A1 — `fixed_price` בעסקת pipeline מסוג `retainer` הוא סכום חודשי.**
-מחולק ב-4.33 לשבוע, במקביל מדויק ל-`monthly_hours` שמנוע הניצול כבר מחלק ב-4.33 לאותה שורת עסקה. עובד גם כשאין `expected_end_date` (ריטיינר פתוח).
+תורם את מלוא הסכום לכל חודש שבו העסקה פעילה, מוכפל בהסתברות. עובד גם כשאין `expected_end_date` (ריטיינר פתוח).
 ⚠️ תווית הטופס ב-`components/pipeline/deal-form.tsx` אומרת "מחיר כולל" גם כש-`deal_type='retainer'`, בעוד `realize-deal-modal.tsx` קורא לאותו שדה "מחיר לחודש". **התווית בטופס היא השגויה** — תיקון UI פתוח.
 
-**A2 — שבוע שחוצה גבול חודש נספר פרו-רטה לפי ימים.**
-`monthFraction = (ימי חפיפה עם החודש) / 7`. סכום החלקים שווה בדיוק למספר הימים בחודש חלקי 7. שונה במכוון מ-`groupWeeksByMonth` ב-[[Cockpit]], שמשייך שבוע שלם לחודש שבו הוא מתחיל — שם זה נדרש לעקביות עם הגרף, כאן המספר עצמאי והגדרתו היא החודש הקלנדרי.
+**A2 — גבול החודש נחתך לפי ימים.**
+מקורות עם טווח תאריכים נספרים רק על ימיהם שבתוך החודש הקלנדרי, כך ששבוע החוצה גבול חודש מתחלק נכון בין שני החודשים. `WeekRevenue.monthFraction` נשמר לצורכי דיווח ולפריסת `allocations`. שונה במכוון מ-`groupWeeksByMonth` ב-[[Cockpit]], שמשייך שבוע שלם לחודש שבו הוא מתחיל — שם זה נדרש לעקביות עם הגרף, כאן ההגדרה היא החודש הקלנדרי.
 
 ## Data flow
 

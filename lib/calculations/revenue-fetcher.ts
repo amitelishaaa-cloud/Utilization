@@ -81,43 +81,5 @@ export async function fetchMonthlyRevenue(
     deals: deals ?? [],
   }
 
-  const result = calcMonthlyRevenue(input)
-
-  // ═══ TEMP DEBUG — להסרה אחרי אבחון אי-ההתאמה ═══
-  console.log('\n═══ REVENUE DEBUG ═══')
-  console.log(`month: ${startStr} .. ${endStr}`)
-  console.log(
-    `rows: projects=${input.projects.length} retainers=${input.retainers.length} deals=${input.deals.length} allocations=${input.allocations.length}`,
-  )
-  for (const p of input.projects) {
-    console.log(
-      `  PROJECT "${p.name}" ${p.pricing_type} ${p.start_date}..${p.end_date} est=${p.estimated_hours} rate=${p.hourly_rate} fixed=${p.fixed_price}`,
-    )
-  }
-  for (const r of input.retainers) {
-    console.log(
-      `  RETAINER "${r.name}" ${r.pricing_type} ${r.start_date}..${r.end_date ?? 'open'} mh=${r.monthly_hours} rate=${r.hourly_rate} monthlyFixed=${r.monthly_fixed_price}`,
-    )
-  }
-  for (const d of input.deals) {
-    console.log(
-      `  DEAL "${d.name}" ${d.deal_type}/${d.pricing_type} stage=${d.current_stage} override=${d.probability_override} ${d.expected_start_date}..${d.expected_end_date ?? 'open'} est=${d.estimated_hours} mh=${d.monthly_hours} rate=${d.hourly_rate} fixed=${d.fixed_price}`,
-    )
-  }
-  for (const a of input.allocations) {
-    console.log(`  ALLOC project=${a.project_id} week=${a.week_start} hours=${a.allocated_hours}`)
-  }
-  console.log('  week        frac    project   pipeline      total   (שבועי בלבד)')
-  for (const w of result.weeks) {
-    console.log(
-      `  ${w.weekStart}  ${w.monthFraction.toFixed(3)}  ${w.projectRevenue.toFixed(2).padStart(9)}  ${w.pipelineRevenue.toFixed(2).padStart(9)}  ${w.total.toFixed(2).padStart(9)}`,
-    )
-  }
-  console.log(
-    `  TOTALS: projects=${result.projectRevenue.toFixed(2)} retainers=${result.retainerRevenue.toFixed(2)} pipeline=${result.pipelineRevenue.toFixed(2)}`,
-  )
-  console.log(`  GRAND TOTAL: ${result.total.toFixed(2)}`)
-  console.log('═══ END REVENUE DEBUG ═══\n')
-
-  return result
+  return calcMonthlyRevenue(input)
 }

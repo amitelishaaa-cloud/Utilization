@@ -108,13 +108,14 @@ describe('calcWeeklyUtilization', () => {
     expect(result[2].utilization).toBeCloseTo(10 / 40, 5)
   })
 
-  // Equal-split fallback: when no allocation rows exist, hours are divided by
-  // (end_date − start_date).days / 7.  With 21 days and 60 h → exactly 20 h/week.
-  it('project without allocations falls back to equal split', () => {
+  // Equal-split fallback is day-based: a week gets the share of estimated_hours
+  // matching the project days that fall inside it.
+  // 2025-07-07 … 2025-07-28 is 22 days inclusive; a full week is 7/22 of them.
+  it('project without allocations falls back to a day-based split', () => {
     const project = makeProject({
       estimated_hours: 60,
       start_date: '2025-07-07',
-      end_date: '2025-07-28', // 21 days → 3 project-weeks exactly
+      end_date: '2025-07-28',
     })
     const input = makeInput({
       projects: [project],
@@ -125,11 +126,52 @@ describe('calcWeeklyUtilization', () => {
     const result = calcWeeklyUtilization(input)
 
     expect(result).toHaveLength(1)
-    expect(result[0].committedHours).toBe(20) // 60 / 3
+    expect(result[0].committedHours).toBeCloseTo(60 * (7 / 22), 5)
+  })
+
+  // Regression: dividing by (end − start)/7 under-counts the project length in
+  // weeks whenever it isn't a whole number of weeks, so every overlapping week
+  // received a full weekly rate and the total exceeded estimated_hours.
+  // 2026-08-01 … 2026-08-30 spans 5 calendar weeks; 75 h must stay 75 h.
+  it('project hours summed across all its weeks equal estimated_hours exactly', () => {
+    const project = makeProject({
+      estimated_hours: 75,
+      start_date: '2026-08-01', // Saturday — falls in the week starting 07-27
+      end_date: '2026-08-30',
+    })
+    const input = makeInput({
+      projects: [project],
+      allocations: [],
+      startDate: new Date(Date.UTC(2026, 6, 27)),
+      endDate: new Date(Date.UTC(2026, 7, 31)),
+    })
+    const result = calcWeeklyUtilization(input)
+
+    const total = result.reduce((sum, w) => sum + w.committedHours, 0)
+    expect(total).toBeCloseTo(75, 5)
+  })
+
+  it('pipeline deal hours summed across all its weeks equal estimated_hours × probability', () => {
+    const deal = makeDeal({
+      estimated_hours: 75,
+      expected_start_date: '2026-08-01',
+      expected_end_date: '2026-08-30',
+      current_stage: 'contract', // 1.0
+    })
+    const input = makeInput({
+      deals: [deal],
+      startDate: new Date(Date.UTC(2026, 6, 27)),
+      endDate: new Date(Date.UTC(2026, 7, 31)),
+    })
+    const result = calcWeeklyUtilization(input)
+
+    const total = result.reduce((sum, w) => sum + w.pipelineHours, 0)
+    expect(total).toBeCloseTo(75, 5)
   })
 
   // Scenario 2: single pipeline deal at a middle stage
-  // deal_weeks = 13/7; weekly_hours = 40 / (13/7); pipeline = weekly_hours × 0.55
+  // 2025-07-07 … 2025-07-20 is 14 days; a full week is half of them.
+  // weekly_hours = 40 × 7/14 = 20; pipeline = 20 × 0.55
   it('single pipeline deal in negotiation stage (55%)', () => {
     const deal = makeDeal({
       estimated_hours: 40,
@@ -146,8 +188,7 @@ describe('calcWeeklyUtilization', () => {
     const result = calcWeeklyUtilization(input)
 
     expect(result).toHaveLength(1)
-    const dealWeeks = 13 / 7
-    const expectedPipeline = (40 / dealWeeks) * 0.55
+    const expectedPipeline = 40 * (7 / 14) * 0.55
     expect(result[0].pipelineHours).toBeCloseTo(expectedPipeline, 4)
     expect(result[0].committedHours).toBe(0)
     expect(result[0].utilization).toBeCloseTo(expectedPipeline / 40, 4)
@@ -177,17 +218,15 @@ describe('calcWeeklyUtilization', () => {
     const result = calcWeeklyUtilization(input)
 
     expect(result).toHaveLength(1)
-    const dealWeeks = 13 / 7
-    const expectedA = (20 / dealWeeks) * 0.55
-    const expectedB = (30 / dealWeeks) * 0.30
+    const expectedA = 20 * (7 / 14) * 0.55
+    const expectedB = 30 * (7 / 14) * 0.30
     expect(result[0].pipelineHours).toBeCloseTo(expectedA + expectedB, 4)
   })
 
   // Scenario 4: probability_override replaces stage probability
   // Same deal at 'inquiry' (default 10%), once with override=0.75 and once without.
   it('probability_override replaces stage default probability', () => {
-    const dealWeeks = 13 / 7
-    const weeklyHours = 40 / dealWeeks
+    const weeklyHours = 40 * (7 / 14)
 
     const withOverride = calcWeeklyUtilization(
       makeInput({

@@ -29,6 +29,41 @@ export function getWeeksInRange(startDate: Date, endDate: Date): Date[] {
   return weeks
 }
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000
+
+/** מספר ימים בטווח, כולל שני הקצוות. טווח של יום בודד = 1. */
+function daysInclusive(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1
+}
+
+/** ימי החפיפה בין שני טווחים, כולל קצוות. 0 כשאין חפיפה. */
+function overlapDays(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): number {
+  const start = Math.max(aStart.getTime(), bStart.getTime())
+  const end = Math.min(aEnd.getTime(), bEnd.getTime())
+  if (end < start) return 0
+  return Math.round((end - start) / MS_PER_DAY) + 1
+}
+
+/**
+ * חלוקת שעות לשבוע לפי ימים: `שעות × (ימי חפיפה עם השבוע / סך ימי הישות)`.
+ *
+ * חלוקה ב-`(end − start)/7` מחשבת פחות שבועות ממספר השבועות הקלנדריים שהישות
+ * חופפת להם בכל פעם שאורכה אינו כפולה שלמה של שבוע, וכל שבוע חופף היה מקבל
+ * תעריף שבועי מלא — כך שסכום השעות חרג מ-`estimated_hours`.
+ */
+function hoursForWeekByDays(
+  entityStart: Date,
+  entityEnd: Date,
+  weekStart: Date,
+  weekEnd: Date,
+  estimatedHours: number,
+): number {
+  if (entityEnd.getTime() < entityStart.getTime()) return 0
+  const days = overlapDays(entityStart, entityEnd, weekStart, weekEnd)
+  if (days === 0) return 0
+  return estimatedHours * (days / daysInclusive(entityStart, entityEnd))
+}
+
 function capacityForWeek(
   weekStart: Date,
   defaultWeeklyHours: number,
@@ -62,8 +97,7 @@ function committedHoursForWeek(
     if (alloc) {
       hours += alloc.allocated_hours
     } else {
-      const projectWeeks = (pEnd.getTime() - pStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
-      hours += p.estimated_hours / projectWeeks
+      hours += hoursForWeekByDays(pStart, pEnd, weekStart, weekEnd, p.estimated_hours)
     }
   }
 
@@ -99,11 +133,10 @@ function pipelineHoursForWeek(weekStart: Date, deals: PipelineDeal[]): number {
       if (dEnd && dEnd.getTime() < weekStart.getTime()) continue
       hours += (d.monthly_hours! / 4.33) * probability
     } else {
-      // project — ההתנהגות הקיימת ללא שינוי
+      // project — חלוקה לפי ימים, כמו בפרויקטים מחויבים
       const dEnd = parseDate(d.expected_end_date!)
       if (dEnd.getTime() < weekStart.getTime()) continue
-      const dealWeeks = (dEnd.getTime() - dStart.getTime()) / (7 * 24 * 60 * 60 * 1000)
-      hours += (d.estimated_hours! / dealWeeks) * probability
+      hours += hoursForWeekByDays(dStart, dEnd, weekStart, weekEnd, d.estimated_hours!) * probability
     }
   }
 
