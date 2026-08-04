@@ -67,11 +67,13 @@ function hoursForWeekByDays(
 function capacityForWeek(
   weekStart: Date,
   defaultWeeklyHours: number,
+  worksFriday: boolean,
   exceptions: CapacityException[],
 ): number {
   const s = toDateStr(weekStart)
   const ex = exceptions.find(e => e.week_start === s)
-  return ex ? ex.available_hours : defaultWeeklyHours
+  if (ex) return ex.available_hours
+  return defaultWeeklyHours + (worksFriday ? 4 : 0)
 }
 
 function committedHoursForWeek(
@@ -145,7 +147,7 @@ function pipelineHoursForWeek(weekStart: Date, deals: PipelineDeal[]): number {
 
 export function calcWeeklyUtilization(input: UtilizationInput): WeekBreakdown[] {
   return getWeeksInRange(input.startDate, input.endDate).map(weekStart => {
-    const capacity = capacityForWeek(weekStart, input.defaultWeeklyHours, input.capacityExceptions)
+    const capacity = capacityForWeek(weekStart, input.defaultWeeklyHours, input.worksFriday, input.capacityExceptions)
     const committedHours = committedHoursForWeek(weekStart, input.projects, input.allocations, input.retainers)
     const pipelineHours = pipelineHoursForWeek(weekStart, input.deals)
     const utilization = capacity > 0 ? (committedHours + pipelineHours) / capacity : 0

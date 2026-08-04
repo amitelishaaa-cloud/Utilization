@@ -12,6 +12,7 @@ import { ForecastColumns } from '@/components/cockpit/forecast-columns'
 import { RecommendationBlock } from '@/components/cockpit/recommendation-block'
 import { ForecastBlurGate } from '@/components/cockpit/forecast-blur-gate'
 import { RevenueMetric } from '@/components/cockpit/revenue-metric'
+import { WeeklyTable } from '@/components/cockpit/weekly-table'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,6 +60,7 @@ export default async function CockpitPage() {
           />
           <ForecastBlurGate plan={plan}>
             <ForecastColumns months={months} />
+            <WeeklyTable weeks={weeks} />
             <RecommendationBlock recommendation={recommendation} />
           </ForecastBlurGate>
         </>

@@ -8,6 +8,7 @@ const navItems = [
   { href: '/projects', label: 'פרויקטים' },
   { href: '/retainers', label: 'רטיינרים' },
   { href: '/pipeline', label: 'Pipeline' },
+  { href: '/settings', label: 'הגדרות' },
 ]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

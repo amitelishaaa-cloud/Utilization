@@ -47,6 +47,10 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 - `ProjectWeeklyAllocation` — `{ id, project_id, week_start, allocated_hours }`
 - `CapacityException` — `{ id, user_id, week_start, available_hours, reason, created_at }`
 
+### `users.works_friday`
+
+`boolean NOT NULL DEFAULT false`, נוסף במיגרציה `20260804000001`. יום שישי חצי-יום — כשדלוק, `calcWeeklyUtilization` מוסיף 4 שעות לקיבולת של כל שבוע רגיל (ראה [[Utilization-Engine]]). `capacity_exceptions` ממשיכות לגבור ולא מצטברות איתו — חריגה היא המספר המדויק שהמשתמש קבע לשבוע הספציפי. נערך במסך `/settings` יחד עם `default_weekly_hours` (ראה [[Cockpit]]).
+
 **`lib/supabase/server.ts`**
 - `createServerClient()` — **async**. Cookie-bound client using `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Every query runs under RLS.
 - `requireUser()` — **async**. Returns the authenticated `User`, or redirects to `/login`. Call once per request and reuse the result.
@@ -58,7 +62,7 @@ related: [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]], [[Utilization-E
 
 | טבלה | עמודות מרכזיות |
 |------|----------------|
-| `users` | `id, email, default_weekly_hours, plan: 'free'\|'pro', plan_expires_at` |
+| `users` | `id, email, default_weekly_hours, works_friday: boolean (מיגרציה 20260804000001), plan: 'free'\|'pro', plan_expires_at` |
 | `clients` | `id, user_id, name` |
 | `projects` | `id, user_id, client_id, source_deal_id, estimated_hours, start_date, end_date, status, notes, priority, reminder_date` |
 | `project_weekly_allocations` | `project_id, week_start, allocated_hours` |

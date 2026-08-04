@@ -41,7 +41,7 @@ There is no lint script configured. TypeScript errors surface during `npm run bu
 
 ## סטטוס נוכחי
 
-DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, הכנסה צפויה לחודש, גרף 3 חודשים, בלוק המלצה, blur gate ל-free tier). auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל. "עסקה שנסגרת → פרויקט/ריטיינר" - הושלם (`realizeDealAction` + `RealizeDealModal`, ראה `Vault/concepts/Pipeline.md`).
+DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CRUD (לקוחות/פרויקטים/רטיינרים/pipeline deals + stage history). מנוע חישוב (`lib/calculations/utilization.ts` + `recommendations.ts`) עם 7 מצבי המלצה. מסך cockpit מלא (hero metric, הכנסה צפויה לחודש, גרף 3 חודשים, טבלת פירוק שבועי מלאה, בלוק המלצה, blur gate ל-free tier). מסך `/settings` לעריכת `default_weekly_hours` ו-`works_friday`. auth אמיתי - הושלם: אימייל+סיסמה, `app/(auth)/`, `proxy.ts`, RLS נאכף בפועל. "עסקה שנסגרת → פרויקט/ריטיינר" - הושלם (`realizeDealAction` + `RealizeDealModal`, ראה `Vault/concepts/Pipeline.md`).
 
 ## נקודות פתוחות שחשוב לזכור
 
@@ -50,6 +50,7 @@ DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CR
 - **`reminder_date` הוא עמודה ו-input בלבד** - אין cron, אין שליחה, אין התראות. אל תניח שקיים מנגנון תזכורות.
 - **איפוס סיסמה לא ממומש**. `/forgot-password` הוא עמוד סטטי בלבד ("פנה למנהל המערכת") - אין `resetPasswordForEmail` ואין SMTP. הוחלט מודע בזמן שיש משתמש אחד.
 - **Confirm Email חייב להישאר כבוי** ב-Supabase (Authentication → Providers → Email). `signUpAction` מצפה ל-session חוזרת ומחזיר שגיאה מפורשת אם אין - אם מדליקים את הטוגל, ההרשמה נשברת.
+- **`getWeekStart` ממפה שבוע ליום שני מטעמי נורמליזציה טכנית (ISO 8601) - זו לא הנחה על ימי העבודה בישראל**. הקיבולת היא מספר שטוח לשבוע, בלי פירוט לפי יום. `users.works_friday` (מיגרציה `20260804000001`, טרם הורצה ב-DB - ראה הערת migration drift) מוסיף 4 שעות לקיבולת השבועית כשדלוק, בלי לגעת במפתח השבוע. נערך במסך `/settings`.
 
 ## תיעוד מורחב (Vault)
 
@@ -64,7 +65,7 @@ DB schema מלא ומאומת (8 טבלאות, RLS על כולן). 4 מסכי CR
 | `lib/types.ts`, `lib/supabase/` | `Vault/concepts/Data-Model.md` |
 | `app/(auth)/`, `proxy.ts`, `lib/auth/`, `components/auth/` | `Vault/concepts/Auth.md` |
 | `lib/calculations/utilization.ts`, `recommendations.ts`, `types.ts` | `Vault/concepts/Utilization-Engine.md` |
-| `lib/calculations/cockpit-helpers.ts`, `lib/calculations/fetcher.ts`, `app/(app)/cockpit/` | `Vault/concepts/Cockpit.md` |
+| `lib/calculations/cockpit-helpers.ts`, `lib/calculations/fetcher.ts`, `app/(app)/cockpit/`, `app/(app)/settings/` | `Vault/concepts/Cockpit.md` |
 | `lib/calculations/revenue.ts`, `revenue-fetcher.ts`, `components/cockpit/revenue-metric.tsx` | `Vault/concepts/Revenue-Forecast.md` |
 | `lib/pipeline-stages.ts`, `app/(app)/pipeline/`, `components/pipeline/` | `Vault/concepts/Pipeline.md` |
 | `app/(app)/projects/`, `components/projects/` | `Vault/concepts/Projects.md` |

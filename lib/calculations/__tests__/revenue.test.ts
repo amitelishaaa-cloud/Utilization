@@ -598,6 +598,7 @@ describe('calcMonthlyRevenue — בידוד ממנוע הניצול', () => {
 
     const utilizationInput: UtilizationInput = {
       defaultWeeklyHours: 40,
+      worksFriday: false,
       startDate: new Date(Date.UTC(2026, 7, 3)),
       endDate: new Date(Date.UTC(2026, 7, 31)),
       projects,

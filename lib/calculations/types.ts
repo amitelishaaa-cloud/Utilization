@@ -16,6 +16,8 @@ export type WeekBreakdown = {
 
 export type UtilizationInput = {
   defaultWeeklyHours: number
+  /** יום שישי חצי-יום — כשדלוק, מוסיף 4 שעות לקיבולת כל שבוע (אלא אם יש capacity_exception לאותו שבוע). */
+  worksFriday: boolean
   startDate: Date
   endDate: Date
   projects: Project[]

@@ -65,6 +65,7 @@ function makeDeal(overrides: Partial<PipelineDeal> = {}): PipelineDeal {
 function makeInput(overrides: Partial<UtilizationInput> = {}): UtilizationInput {
   return {
     defaultWeeklyHours: 40,
+    worksFriday: false,
     startDate: new Date(Date.UTC(2025, 6, 7)),   // 2025-07-07
     endDate: new Date(Date.UTC(2025, 6, 21)),     // 2025-07-21
     projects: [],
@@ -273,6 +274,37 @@ describe('calcWeeklyUtilization', () => {
     expect(result[1].capacity).toBe(4)
   })
 
+  // works_friday מוסיף 4 שעות קיבולת לכל שבוע רגיל — יום שישי חצי-יום.
+  it('worksFriday מוסיף 4 שעות לקיבולת השבועית', () => {
+    const withFriday = calcWeeklyUtilization(
+      makeInput({ defaultWeeklyHours: 40, worksFriday: true }),
+    )
+    const withoutFriday = calcWeeklyUtilization(
+      makeInput({ defaultWeeklyHours: 40, worksFriday: false }),
+    )
+
+    expect(withFriday[0].capacity).toBe(44)
+    expect(withoutFriday[0].capacity).toBe(40)
+  })
+
+  // capacity_exception הוא המספר המדויק שהמשתמש קבע לאותו שבוע — לא מתווסף
+  // עליו עוד 4 שעות, גם אם worksFriday דלוק.
+  it('capacity_exception גובר על worksFriday — לא מצטבר איתו', () => {
+    const exception: CapacityException = {
+      id: 'exc-1',
+      user_id: 'user-1',
+      week_start: '2025-07-07',
+      available_hours: 4,
+      reason: 'vacation',
+      created_at: '2025-01-01T00:00:00Z',
+    }
+    const result = calcWeeklyUtilization(
+      makeInput({ defaultWeeklyHours: 40, worksFriday: true, capacityExceptions: [exception] }),
+    )
+
+    expect(result[0].capacity).toBe(4)
+  })
+
   // Retainer contributes monthly_hours / 4.33 to every active week
   it('active retainer contributes monthly_hours / 4.33 per week', () => {
     const retainer: Retainer = {
@@ -304,7 +336,7 @@ describe('calcWeeklyUtilization', () => {
 
   it('pipeline retainer deal (with end_date) contributes monthly_hours/4.33 × probability per active week', () => {
     const input: UtilizationInput = {
-      defaultWeeklyHours: 40,
+      defaultWeeklyHours: 40, worksFriday: false,
       startDate: new Date('2026-08-03'),
       endDate: new Date('2026-08-09'),
       projects: [], allocations: [], retainers: [], capacityExceptions: [],
@@ -330,7 +362,7 @@ describe('calcWeeklyUtilization', () => {
 
   it('pipeline retainer deal with no end_date contributes to every week until window end', () => {
     const input: UtilizationInput = {
-      defaultWeeklyHours: 40,
+      defaultWeeklyHours: 40, worksFriday: false,
       startDate: new Date('2026-08-03'),
       endDate: new Date('2026-08-16'),   // 2 שבועות
       projects: [], allocations: [], retainers: [], capacityExceptions: [],
@@ -357,7 +389,7 @@ describe('calcWeeklyUtilization', () => {
 
   it('pipeline retainer deal does not contribute before expected_start_date', () => {
     const input: UtilizationInput = {
-      defaultWeeklyHours: 40,
+      defaultWeeklyHours: 40, worksFriday: false,
       startDate: new Date('2026-08-03'),
       endDate: new Date('2026-08-16'),
       projects: [], allocations: [], retainers: [], capacityExceptions: [],

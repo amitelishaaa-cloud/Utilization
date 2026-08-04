@@ -45,7 +45,7 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 ## לוגיקת חישוב
 
 ```
-capacity(week)   = capacity_exceptions.available_hours OR users.default_weekly_hours
+capacity(week)   = capacity_exceptions.available_hours OR (users.default_weekly_hours + (works_friday ? 4 : 0))
 committed(week)  = Σ project_weekly_allocations OR (estimated_hours × ימי_חפיפה_עם_השבוע / סך_ימי_הפרויקט)
                  + Σ retainer.monthly_hours / 4.33
 pipeline(week)   = Σ (deal.estimated_hours × ימי_חפיפה / סך_ימי_העסקה) × stage_probability  # deal_type='project'
@@ -57,6 +57,8 @@ utilization      = (committed + pipeline) / capacity
 > **חלוקת שעות הפרויקטים היא לפי ימים** (כולל שני הקצוות), לא לפי תעריף שבועי. הנוסחה הקודמת חילקה ב-`(end − start)/7`, שמחזיר פחות שבועות ממספר השבועות הקלנדריים שהפרויקט חופף להם בכל פעם שאורכו אינו כפולה שלמה של שבוע — וכל שבוע חופף קיבל תעריף שבועי מלא. פרויקט של 75 שעות מ-01/08/2026 עד 30/08 קיבל כך **90.5 שעות, ניפוח של 21%**. כעת סכום השעות על פני כל שבועות הפרויקט שווה בדיוק ל-`estimated_hours`, ויש טסטים שמעגנים זאת.
 >
 > **רטיינרים ממשיכים להתפרס ב-`/4.33`, וזה מכוון.** בניצול השאלה היא כמה שעות הרטיינר צורך בשבוע טיפוסי מול הקיבולת השבועית — עומס מתמשך, לא סכום חד-פעמי. זה שונה מחישוב ההכנסה, שבו רטיינר הוא ישות חודשית שתורמת את מלוא סכומה פעם בחודש. ראה [[Revenue-Forecast]].
+>
+> **`getWeekStart` ממפה כל שבוע ליום שני שלו — זו נורמליזציה טכנית (ISO 8601), לא הנחה על ימי עבודה.** הקיבולת היא מספר שטוח אחד לשבוע ללא פירוט לפי יום, כך ש"יום שני" הוא רק מפתח האיסוף ואינו קובע אילו ימים נחשבים לעבודה. `users.works_friday` (מיגרציה `20260804000001`) מוסיף קיבולת ליום שישי חצי-יום בלי לגעת במפתח השבוע — ראה [[Data-Model]]. נערך במסך `/settings`.
 
 ## לוגיקת המלצות (priority order)
 

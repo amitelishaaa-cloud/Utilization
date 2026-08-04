@@ -25,7 +25,7 @@ export async function fetchUtilization(
     { data: deals },
     { data: capacityExceptions },
   ] = await Promise.all([
-    supabase.from('users').select('default_weekly_hours, plan').eq('id', userId).single(),
+    supabase.from('users').select('default_weekly_hours, works_friday, plan').eq('id', userId).single(),
     supabase
       .from('projects')
       .select('*')
@@ -68,6 +68,7 @@ export async function fetchUtilization(
 
   const input: UtilizationInput = {
     defaultWeeklyHours: user?.default_weekly_hours ?? 40,
+    worksFriday: user?.works_friday ?? false,
     startDate,
     endDate,
     projects: projects ?? [],
