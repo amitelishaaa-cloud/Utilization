@@ -81,5 +81,51 @@ export async function fetchMonthlyRevenue(
     deals: deals ?? [],
   }
 
-  return calcMonthlyRevenue(input)
+  const result = calcMonthlyRevenue(input)
+
+  // ═══ TEMP DEBUG — להסרה אחרי אבחון אי-ההתאמה ═══
+  console.log('\n═══ REVENUE DEBUG ═══')
+  console.log(`month: ${startStr} .. ${endStr}`)
+  console.log(
+    `rows: projects=${input.projects.length} retainers=${input.retainers.length} deals=${input.deals.length} allocations=${input.allocations.length}`,
+  )
+  for (const p of input.projects) {
+    console.log(
+      `  PROJECT "${p.name}" ${p.pricing_type} ${p.start_date}..${p.end_date} est=${p.estimated_hours} rate=${p.hourly_rate} fixed=${p.fixed_price}`,
+    )
+  }
+  for (const r of input.retainers) {
+    console.log(
+      `  RETAINER "${r.name}" ${r.pricing_type} ${r.start_date}..${r.end_date ?? 'open'} mh=${r.monthly_hours} rate=${r.hourly_rate} monthlyFixed=${r.monthly_fixed_price}`,
+    )
+  }
+  for (const d of input.deals) {
+    console.log(
+      `  DEAL "${d.name}" ${d.deal_type}/${d.pricing_type} stage=${d.current_stage} override=${d.probability_override} ${d.expected_start_date}..${d.expected_end_date ?? 'open'} est=${d.estimated_hours} mh=${d.monthly_hours} rate=${d.hourly_rate} fixed=${d.fixed_price}`,
+    )
+  }
+  for (const a of input.allocations) {
+    console.log(`  ALLOC project=${a.project_id} week=${a.week_start} hours=${a.allocated_hours}`)
+  }
+  console.log('  week        frac    project   retainer   pipeline      total')
+  for (const w of result.weeks) {
+    console.log(
+      `  ${w.weekStart}  ${w.monthFraction.toFixed(3)}  ${w.projectRevenue.toFixed(2).padStart(9)}  ${w.retainerRevenue.toFixed(2).padStart(9)}  ${w.pipelineRevenue.toFixed(2).padStart(9)}  ${w.total.toFixed(2).padStart(9)}`,
+    )
+  }
+  const bySource = result.weeks.reduce(
+    (acc, w) => ({
+      project: acc.project + w.projectRevenue * w.monthFraction,
+      retainer: acc.retainer + w.retainerRevenue * w.monthFraction,
+      pipeline: acc.pipeline + w.pipelineRevenue * w.monthFraction,
+    }),
+    { project: 0, retainer: 0, pipeline: 0 },
+  )
+  console.log(
+    `  TOTALS: projects=${bySource.project.toFixed(2)} retainers=${bySource.retainer.toFixed(2)} pipeline=${bySource.pipeline.toFixed(2)}`,
+  )
+  console.log(`  GRAND TOTAL: ${result.total.toFixed(2)}`)
+  console.log('═══ END REVENUE DEBUG ═══\n')
+
+  return result
 }
