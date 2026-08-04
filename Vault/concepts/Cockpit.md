@@ -15,7 +15,7 @@ related: [[Utilization-Engine]], [[Revenue-Forecast]], [[Data-Model]], [[UI-Comp
 - `lib/calculations/revenue-fetcher.ts` — `fetchMonthlyRevenue()`: שליפה עצמאית → `MonthRevenue` (ראה [[Revenue-Forecast]])
 - `components/cockpit/hero-metric.tsx` — מציג את ה-% הגדול + תווית חודש; prop `revenue?: ReactNode` מוסיף עמודה נלווית
 - `components/cockpit/revenue-metric.tsx` — הכנסה צפויה לחודש הקלנדרי + בלור free tier inline
-- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות); כל שבוע בפירוט מוצג כטווח **ראשון–חמישי** (`workWeekRange()`: ראשון = יום לפני מפתח השבוע השמור, חמישי = 3 ימים אחריו — תווית בלבד, לא משנה את `week_start` השמור או את החישוב) דרך `<DateRange>` (ראה [[UI-Components]]) — **לא** string גולמי, כדי ש-`dir="ltr"` ימנע היפוך bidi בתוך ה-RTL layout
+- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות); כל שבוע בפירוט מוצג כטווח **ראשון–חמישי**, חתוך לגבולות החודש הפעיל (`workWeekRange()` + `clipRangeToMonth()` מ-`cockpit-helpers.ts`, ראה למטה) דרך `<DateRange>` (ראה [[UI-Components]]) — **לא** string גולמי, כדי ש-`dir="ltr"` ימנע היפוך bidi בתוך ה-RTL layout
 - `components/cockpit/recommendation-block.tsx` — תג צבעוני + טקסט המלצה
 - `components/cockpit/forecast-blur-gate.tsx` — עוטף עמודות+המלצה; blur לfree + CTA
 
@@ -24,10 +24,12 @@ related: [[Utilization-Engine]], [[Revenue-Forecast]], [[Data-Model]], [[UI-Comp
 **`lib/calculations/cockpit-helpers.ts`**
 - `MonthSummary` — `{ yearMonth, monthLabel, monthIndex, utilization, weeks: WeekBreakdown[] }`
 - `HeroMonth` — `{ monthIndex, monthLabel, utilization, nextMonthOverload?: { monthIndex, monthLabel, utilization } }` — עוטף דאטה לחודש הנוכחי + overload בחודש הבא
-- `groupWeeksByMonth(weeks): MonthSummary[]` — ממיין weeks לחודשים, capacity-weighted utilization. **קיבולת שבוע גבול נפרסת לפי ימי עבודה** (ראה למטה) — לא מיוחסת במלואה לחודש שמכיל את מפתח יום השני
+- `groupWeeksByMonth(weeks): MonthSummary[]` — ממיין weeks לחודשים, capacity-weighted utilization. **קיבולת ושעות של שבוע גבול נפרסות לפי ימי עבודה** (ראה למטה) — לא מיוחסות במלואן לחודש שמכיל את מפתח יום השני
 - `getHeroMonth(weeks, today?): HeroMonth` — מחזיר החודש הנוכחי בפי `today` (ברירת מחדל: `new Date()`). חישוב מבוסס local time (לא UTC). `nextMonthOverload` מאוכלס אם החודש הבא חורג מ-`UTILIZATION_OVERLOAD_THRESHOLD` (>110%)
 - `getStartOfCurrentWeek(today?): Date` — יום שני הנוכחי (UTC)
 - `addMonths(date, n): Date` — מוסיף n חודשים (UTC)
+- `workWeekRange(weekStart): { start, end }` — ראשון–חמישי המקביל למפתח יום שני נתון (תווית תצוגה בלבד)
+- `clipRangeToMonth(start, end, yearMonth): { start, end }` — חותך טווח ISO לגבולות חודש קלנדרי; משמש להצגת שבוע גבול תחת חודש בודד
 - `utilizationColorClass(u): string` — Tailwind text color class לפי %
 - `utilizationBarColorClass(u): string` — Tailwind bg color class לפי %
 - `utilizationColorClass` ו-`utilizationBarColorClass` מסתמכות על ספי ניצול מ-`lib/calculations/thresholds.ts` (ראה [[Utilization-Engine]])
@@ -69,9 +71,11 @@ CockpitPage (Server)
 
 ## שבוע העבודה — ראשון–חמישי מול מפתח יום שני
 
-`week_start` השמור (DB, `WeekBreakdown.weekStart`) הוא תמיד יום שני — נורמליזציה טכנית של המנוע (ראה [[Utilization-Engine]]), לא הנחה על ימי עבודה. ה-UI ממיר זאת לתצוגת שבוע עבודה ישראלי: `ForecastColumns.workWeekRange()` מחזיר ראשון (יום לפני ה-Monday השמור) עד חמישי (3 ימים אחריו), מוצג דרך `<DateRange>`. זו תווית תצוגה גרידא — לא נוגעת ב-`week_start` עצמו, ב-DB, או בחישוב השבוע עצמו.
+`week_start` השמור (DB, `WeekBreakdown.weekStart`) הוא תמיד יום שני — נורמליזציה טכנית של המנוע (ראה [[Utilization-Engine]]), לא הנחה על ימי עבודה. `workWeekRange()` (ב-`cockpit-helpers.ts`) ממפה זאת לתצוגת שבוע עבודה ישראלי: ראשון (יום לפני ה-Monday השמור) עד חמישי (3 ימים אחריו). זו תווית תצוגה גרידא — לא נוגעת ב-`week_start` עצמו, ב-DB, או בחישוב השבוע עצמו.
 
-**הקיבולת וגם השעות (committed+pipeline) מושפעות — פריסה סימטרית.** `groupWeeksByMonth` משתמש באותה מיפוי 5 ימי-עבודה כדי לפרוס את שבוע הגבול בין שני החודשים שהוא חוצה, פרופורציונלית למספר ימי העבודה של כל צד: `(ימי_עבודה_בחודש / 5) × ערך_השבוע_המלא`, לכל אחד משני הצירים בנפרד. למשל שבוע ששני ימיו הראשונים (ראשון-שני) באוגוסט ושלושת האחרונים (שלישי-רביעי-חמישי) בספטמבר, עם קיבולת 40 ושעות 25: תורם `2/5×40=16` שעות-קיבולת ו-`2/5×25=10` שעות-עבודה לאוגוסט, ו-`3/5×40=24` שעות-קיבולת ו-`3/5×25=15` שעות-עבודה לספטמבר. **פריסה סימטרית היא הכרחית** — לפרוס רק את הקיבולת ולהשאיר את השעות מיוחסות במלואן לצד אחד היה מעוות את האחוז (מכנה קטן בלי מונה תואם בצד אחד, מונה שלם על מכנה מוקטן בצד השני). `MonthSummary.weeks` (רשימת השבועות להצגה בפירוט שנפתח בלחיצה) **לא מתפצלת** — כל שבוע עדיין מוצג במלואו תחת החודש שמכיל את מפתח יום השני שלו; רק הצבירה (`utilization` הכוללת של החודש) מושפעת. מעוגן ב-`lib/calculations/__tests__/cockpit-helpers.test.ts`.
+**הקיבולת וגם השעות (committed+pipeline) מושפעות — פריסה סימטרית.** `groupWeeksByMonth` משתמש באותה מיפוי 5 ימי-עבודה כדי לפרוס את שבוע הגבול בין שני החודשים שהוא חוצה, פרופורציונלית למספר ימי העבודה של כל צד: `(ימי_עבודה_בחודש / 5) × ערך_השבוע_המלא`, לכל אחד משני הצירים בנפרד. למשל שבוע ששני ימיו הראשונים (ראשון-שני) באוגוסט ושלושת האחרונים (שלישי-רביעי-חמישי) בספטמבר, עם קיבולת 40 ושעות 25: תורם `2/5×40=16` שעות-קיבולת ו-`2/5×25=10` שעות-עבודה לאוגוסט, ו-`3/5×40=24` שעות-קיבולת ו-`3/5×25=15` שעות-עבודה לספטמבר. **פריסה סימטרית היא הכרחית** — לפרוס רק את הקיבולת ולהשאיר את השעות מיוחסות במלואן לצד אחד היה מעוות את האחוז (מכנה קטן בלי מונה תואם בצד אחד, מונה שלם על מכנה מוקטן בצד השני).
+
+**תצוגת השבוע ברשימה — שורה אחת, טווח חתוך.** `MonthSummary.weeks` (חברות השבוע לרשימה שנפתחת בלחיצה על עמודת חודש) **לא מתפצלת** — כל שבוע עדיין מופיע כשורה אחת, תחת החודש שמכיל את מפתח יום השני שלו בלבד. אבל **טווח התאריכים המוצג באותה שורה חתוך** ל-`clipRangeToMonth()`: שבוע הגבול לדוגמה מוצג "30/08–31/08" תחת אוגוסט (לא "30/08–03/09"), ו"01/09–03/09" תחת ספטמבר, אילו היה מופיע שם. **האחוז המוצג נשאר `week.utilization` הגולמי, ללא שינוי** — כי היחס בין שעות לקיבולת של אותו שבוע לא משתנה כשגוזרים חלק ממנו (מונה ומכנה מתכווצים באותו יחס). מעוגן ב-`lib/calculations/__tests__/cockpit-helpers.test.ts`.
 
 ## מסך הגדרות (`/settings`)
 

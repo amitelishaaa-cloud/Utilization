@@ -1,4 +1,5 @@
 import type { WeekBreakdown } from '@/lib/calculations/types'
+import { parseDate, toDateStr } from './utilization'
 import { UTILIZATION_LOW_THRESHOLD, UTILIZATION_HIGH_THRESHOLD, UTILIZATION_OVERLOAD_THRESHOLD } from './thresholds'
 
 export type MonthSummary = {
@@ -50,6 +51,38 @@ function workdaysInMonth(weekStart: string, yearMonth: string): number {
     if (ym === yearMonth) count++
   }
   return count
+}
+
+/**
+ * שבוע העבודה (ראשון–חמישי) המקביל למפתח השבוע השמור (יום שני): ראשון = יום
+ * לפני המפתח, חמישי = 3 ימים אחריו. "יום שני" הוא רק מפתח האיסוף הפנימי של
+ * מנוע הניצול — זו תווית תצוגה גרידא, לא נוגעת בחישוב עצמו.
+ */
+export function workWeekRange(weekStart: string): { start: string; end: string } {
+  const sunday = parseDate(weekStart)
+  sunday.setUTCDate(sunday.getUTCDate() - 1)
+  const thursday = parseDate(weekStart)
+  thursday.setUTCDate(thursday.getUTCDate() + 3)
+  return { start: toDateStr(sunday), end: toDateStr(thursday) }
+}
+
+/**
+ * חותך טווח ISO (start–end) לגבולות חודש קלנדרי נתון — משמש לתצוגת שבוע גבול
+ * תחת חודש בודד בפירוט השבועי (ראה [[Cockpit]]): הטווח המוצג מוגבל לימים
+ * שבאמת שייכים לאותו חודש, גם אם הטווח האמיתי (5 ימי העבודה) חוצה אליו.
+ */
+export function clipRangeToMonth(
+  start: string,
+  end: string,
+  yearMonth: string,
+): { start: string; end: string } {
+  const [year, month] = yearMonth.split('-').map(Number)
+  const monthStart = `${yearMonth}-01`
+  const monthEnd = toDateStr(new Date(Date.UTC(year, month, 0))) // יום 0 בחודש הבא = היום האחרון בחודש הזה
+  return {
+    start: start < monthStart ? monthStart : start,
+    end: end > monthEnd ? monthEnd : end,
+  }
 }
 
 export function groupWeeksByMonth(weeks: WeekBreakdown[]): MonthSummary[] {

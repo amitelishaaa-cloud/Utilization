@@ -7,6 +7,8 @@ import {
   formatMonthLabel,
   utilizationColorClass,
   utilizationBarColorClass,
+  workWeekRange,
+  clipRangeToMonth,
 } from '@/lib/calculations/cockpit-helpers'
 import type { WeekBreakdown } from '@/lib/calculations/types'
 
@@ -97,6 +99,64 @@ describe('groupWeeksByMonth', () => {
     // Capacity-weighted: (32+18) / (40+20) = 50/60 ≈ 0.8333
     // Simple average would give (0.80+0.90)/2 = 0.85 — wrong
     expect(months[0].utilization).toBeCloseTo(50 / 60, 4)
+  })
+})
+
+// ── workWeekRange ────────────────────────────────────────────────────────────
+
+describe('workWeekRange', () => {
+  it('ממפה מפתח יום שני לטווח ראשון–חמישי (יום לפני, 3 ימים אחרי)', () => {
+    // 2026-08-03 הוא יום שני
+    expect(workWeekRange('2026-08-03')).toEqual({ start: '2026-08-02', end: '2026-08-06' })
+  })
+
+  it('שבוע גבול — הטווח חוצה לחודש הבא', () => {
+    // 2026-08-31 הוא יום שני; ראשון=30/08, חמישי=03/09
+    expect(workWeekRange('2026-08-31')).toEqual({ start: '2026-08-30', end: '2026-09-03' })
+  })
+
+  it('חוצה גבול שנה', () => {
+    // 2025-12-29 הוא יום שני; ראשון=28/12/2025, חמישי=01/01/2026
+    expect(workWeekRange('2025-12-29')).toEqual({ start: '2025-12-28', end: '2026-01-01' })
+  })
+})
+
+// ── clipRangeToMonth ─────────────────────────────────────────────────────────
+
+describe('clipRangeToMonth', () => {
+  it('טווח שכולו בתוך החודש נשאר ללא שינוי', () => {
+    expect(clipRangeToMonth('2026-08-02', '2026-08-06', '2026-08')).toEqual({
+      start: '2026-08-02',
+      end: '2026-08-06',
+    })
+  })
+
+  it('חותך את סוף הטווח כשהוא גולש לחודש הבא', () => {
+    expect(clipRangeToMonth('2026-08-30', '2026-09-03', '2026-08')).toEqual({
+      start: '2026-08-30',
+      end: '2026-08-31',
+    })
+  })
+
+  it('חותך את תחילת הטווח כשהוא גולש מהחודש הקודם', () => {
+    expect(clipRangeToMonth('2026-08-30', '2026-09-03', '2026-09')).toEqual({
+      start: '2026-09-01',
+      end: '2026-09-03',
+    })
+  })
+
+  it('חוצה גבול שנה — חיתוך לדצמבר', () => {
+    expect(clipRangeToMonth('2025-12-28', '2026-01-01', '2025-12')).toEqual({
+      start: '2025-12-28',
+      end: '2025-12-31',
+    })
+  })
+
+  it('חוצה גבול שנה — חיתוך לינואר', () => {
+    expect(clipRangeToMonth('2025-12-28', '2026-01-01', '2026-01')).toEqual({
+      start: '2026-01-01',
+      end: '2026-01-01',
+    })
   })
 })
 

@@ -1,23 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { utilizationBarColorClass } from '@/lib/calculations/cockpit-helpers'
+import { utilizationBarColorClass, workWeekRange, clipRangeToMonth } from '@/lib/calculations/cockpit-helpers'
 import type { MonthSummary } from '@/lib/calculations/cockpit-helpers'
-import { parseDate, toDateStr } from '@/lib/calculations/utilization'
 import DateRange from '@/components/ui/date-range'
-
-/**
- * שבוע העבודה (ראשון–חמישי) המקביל למפתח השבוע השמור (יום שני).
- * "יום שני" הוא רק מפתח האיסוף הפנימי של המנוע — ראשון הוא היום שלפניו,
- * חמישי הוא שלושה ימים אחריו. לא משנה את החישוב, רק את התאריכים המוצגים.
- */
-function workWeekRange(weekStart: string): { start: string; end: string } {
-  const sunday = parseDate(weekStart)
-  sunday.setUTCDate(sunday.getUTCDate() - 1)
-  const thursday = parseDate(weekStart)
-  thursday.setUTCDate(thursday.getUTCDate() + 3)
-  return { start: toDateStr(sunday), end: toDateStr(thursday) }
-}
 
 export function ForecastColumns({ months }: { months: MonthSummary[] }) {
   const [activeIdx, setActiveIdx] = useState<number | null>(null)
@@ -74,7 +60,10 @@ export function ForecastColumns({ months }: { months: MonthSummary[] }) {
           </p>
           <div className="space-y-1">
             {months[activeIdx].weeks.map(week => {
-              const range = workWeekRange(week.weekStart)
+              const fullRange = workWeekRange(week.weekStart)
+              // שבוע גבול (ראה [[Cockpit]]): הטווח המוצג מוגבל לימים שבאמת
+              // בחודש הפעיל, גם אם 5 ימי העבודה בפועל חוצים לחודש הבא/הקודם.
+              const range = clipRangeToMonth(fullRange.start, fullRange.end, months[activeIdx].yearMonth)
               return (
                 <div
                   key={week.weekStart}
