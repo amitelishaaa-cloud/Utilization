@@ -10,11 +10,11 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 
 ## Key files
 - `lib/calculations/types.ts` — types של המנוע
-- `lib/calculations/utilization.ts` — חישוב שבועי
+- `lib/calculations/utilization.ts` — חישוב שבועי (day-based distribution for projects & pipeline projects)
 - `lib/calculations/recommendations.ts` — לוגיקת המלצות rule-based
 - `lib/calculations/fetcher.ts` — שכבת ה-DB המחברת את מנוע הניצול לSupabase
 - `lib/calculations/revenue.ts` — חישוב הכנסה חודשי (מנוע טהור)
-- `lib/calculations/revenue-fetcher.ts` — שכבת ה-DB המחברת את מנוע ההכנסה לSupabase
+- `lib/calculations/revenue-fetcher.ts` — שכבת ה-DB למחישוב הכנסה; ממריץ `calcMonthlyRevenue` לחודש קלנדרי
 - `lib/pipeline-stages.ts` — הסתברויות ברירת מחדל לשלבים (ראה [[Data-Model]])
 - `lib/calculations/thresholds.ts` — ספי ניצול (single source of truth): `UTILIZATION_LOW_THRESHOLD` (0.5), `UTILIZATION_HIGH_THRESHOLD` (0.8), `UTILIZATION_SUSTAINED_THRESHOLD` (0.9), `UTILIZATION_OVERLOAD_THRESHOLD` (1.1)
 
