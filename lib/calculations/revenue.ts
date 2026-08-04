@@ -13,7 +13,6 @@ import { formatMonthLabel } from './cockpit-helpers'
  */
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000
-const MS_PER_WEEK = 7 * MS_PER_DAY
 
 export type RevenueInput = {
   monthStart: Date   // ה-1 בחודש, UTC
@@ -28,48 +27,59 @@ export type RevenueInput = {
 export type WeekRevenue = {
   weekStart: string        // ISO date YYYY-MM-DD, תמיד יום שני
   monthFraction: number    // 0..1 — חלק השבוע שנופל בתוך החודש הקלנדרי
-  projectRevenue: number   // תרומה שבועית מלאה, לפני monthFraction
+  projectRevenue: number   // תרומת הפרויקטים לימי השבוע שבתוך החודש
   pipelineRevenue: number  // עסקאות פרויקט, כבר משוקללות בהסתברות
-  total: number            // (project + pipeline) × monthFraction
+  total: number            // project + pipeline
 }
 
 export type MonthRevenue = {
   yearMonth: string          // "2026-08"
   monthLabel: string         // "אוגוסט 2026"
-  projectRevenue: number     // פרויקטים — נפרסים שבועית
+  projectRevenue: number     // פרויקטים — נפרסים לפי ימים
   retainerRevenue: number    // רטיינרים — הסכום החודשי המלא
-  pipelineRevenue: number    // עסקאות — פרויקט נפרס שבועית, ריטיינר חודשי; שניהם משוקללים
+  pipelineRevenue: number    // עסקאות — פרויקט לפי ימים, ריטיינר חודשי; שניהם משוקללים
   total: number
   weeks: WeekRevenue[]
 }
 
+/** מספר ימים בטווח, כולל שני הקצוות. טווח של יום בודד = 1. */
+function daysInclusive(start: Date, end: Date): number {
+  return Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1
+}
+
+/** ימי החפיפה בין שני טווחים, כולל קצוות. 0 כשאין חפיפה. */
+function overlapDays(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date): number {
+  const start = Math.max(aStart.getTime(), bStart.getTime())
+  const end = Math.min(aEnd.getTime(), bEnd.getTime())
+  if (end < start) return 0
+  return Math.round((end - start) / MS_PER_DAY) + 1
+}
+
 /**
- * אורך ישות בשבועות, לפי אותה נוסחה שמנוע הניצול משתמש בה.
- * מחזיר 0 כשהטווח מנוון — `chk_end_after_start` מתיר end === start,
- * ואסור שזה ייהפך לחלוקה באפס.
+ * ערך כספי כולל של ישות עם טווח תאריכים (פרויקט או עסקת פרויקט).
+ * fixed → המחיר הכולל; hourly → שעות × תעריף.
  */
-function entityWeeks(startDate: string, endDate: string): number {
-  const start = parseDate(startDate)
-  const end = parseDate(endDate)
-  const weeks = (end.getTime() - start.getTime()) / MS_PER_WEEK
-  return weeks > 0 ? weeks : 0
+function totalValue(
+  pricingType: 'hourly' | 'fixed',
+  fixedPrice: number | null,
+  hours: number | null,
+  hourlyRate: number | null,
+): number {
+  return pricingType === 'fixed' ? (fixedPrice ?? 0) : (hours ?? 0) * (hourlyRate ?? 0)
 }
 
-/** חלק השבוע (0..1) שנופל בתוך החודש הקלנדרי — לשבועות שחוצים גבול חודש. */
-function monthFractionForWeek(weekStart: Date, monthStart: Date, monthEnd: Date): number {
-  const weekEnd = new Date(weekStart)
-  weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
-
-  const overlapStart = Math.max(weekStart.getTime(), monthStart.getTime())
-  const overlapEnd = Math.min(weekEnd.getTime(), monthEnd.getTime())
-  if (overlapEnd < overlapStart) return 0
-
-  const days = (overlapEnd - overlapStart) / MS_PER_DAY + 1
-  return days / 7
-}
-
+/**
+ * תרומת הפרויקטים לימי השבוע שנופלים בתוך החודש.
+ *
+ * הפריסה היא **לפי ימים**: `ערך_כולל × (ימי חפיפה / סך ימי הפרויקט)`. פריסה
+ * לפי תעריף שבועי שגויה כאן — פרויקט שאורכו אינו כפולה שלמה של שבוע חופף
+ * ליותר שבועות קלנדריים מ-`(end − start)/7`, וכל שבוע מלא היה מקבל תעריף
+ * שבועי שלם, כך שסכום התרומות חורג מערך הפרויקט.
+ */
 function projectRevenueForWeek(
   weekStart: Date,
+  monthStart: Date,
+  monthEnd: Date,
   projects: Project[],
   allocations: ProjectWeeklyAllocation[],
 ): number {
@@ -77,26 +87,36 @@ function projectRevenueForWeek(
   const weekEnd = new Date(weekStart)
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
 
+  // חלק השבוע שנמצא בתוך החודש — רק עליו סופרים
+  const spanStart = new Date(Math.max(weekStart.getTime(), monthStart.getTime()))
+  const spanEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()))
+  if (spanEnd.getTime() < spanStart.getTime()) return 0
+
   let revenue = 0
 
   for (const p of projects) {
     if (p.status !== 'active') continue
     const pStart = parseDate(p.start_date)
     const pEnd = parseDate(p.end_date)
-    if (pStart.getTime() > weekEnd.getTime()) continue
-    if (pEnd.getTime() < weekStart.getTime()) continue
+    if (pEnd.getTime() < pStart.getTime()) continue
 
-    const projectWeeks = entityWeeks(p.start_date, p.end_date)
-    if (projectWeeks === 0) continue
+    // שעות ידניות מוגדרות ברמת שבוע — נפרסות פרו-רטה לחלק השבוע שבחודש
+    const alloc =
+      p.pricing_type === 'hourly'
+        ? allocations.find(a => a.project_id === p.id && a.week_start === weekStartStr)
+        : undefined
 
-    if (p.pricing_type === 'fixed') {
-      // פריסה שווה: המכנה הוא אורך הפרויקט המלא, לא החלק שבתוך החודש
-      revenue += (p.fixed_price ?? 0) / projectWeeks
-    } else {
-      const alloc = allocations.find(a => a.project_id === p.id && a.week_start === weekStartStr)
-      const hours = alloc ? alloc.allocated_hours : p.estimated_hours / projectWeeks
-      revenue += hours * (p.hourly_rate ?? 0)
+    if (alloc) {
+      const weekDaysInMonth = overlapDays(weekStart, weekEnd, monthStart, monthEnd)
+      revenue += alloc.allocated_hours * (p.hourly_rate ?? 0) * (weekDaysInMonth / 7)
+      continue
     }
+
+    const days = overlapDays(pStart, pEnd, spanStart, spanEnd)
+    if (days === 0) continue
+
+    const value = totalValue(p.pricing_type, p.fixed_price, p.estimated_hours, p.hourly_rate)
+    revenue += value * (days / daysInclusive(pStart, pEnd))
   }
 
   return revenue
@@ -167,9 +187,18 @@ function pipelineRetainerRevenueForMonth(
 }
 
 /** עסקאות מסוג פרויקט בלבד — עסקאות ריטיינר מטופלות ברמה החודשית. */
-function pipelineProjectRevenueForWeek(weekStart: Date, deals: PipelineDeal[]): number {
+function pipelineProjectRevenueForWeek(
+  weekStart: Date,
+  monthStart: Date,
+  monthEnd: Date,
+  deals: PipelineDeal[],
+): number {
   const weekEnd = new Date(weekStart)
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
+
+  const spanStart = new Date(Math.max(weekStart.getTime(), monthStart.getTime()))
+  const spanEnd = new Date(Math.min(weekEnd.getTime(), monthEnd.getTime()))
+  if (spanEnd.getTime() < spanStart.getTime()) return 0
 
   let revenue = 0
 
@@ -178,20 +207,16 @@ function pipelineProjectRevenueForWeek(weekStart: Date, deals: PipelineDeal[]): 
     if (d.deal_type === 'retainer') continue
 
     const dStart = parseDate(d.expected_start_date)
-    if (dStart.getTime() > weekEnd.getTime()) continue
     const dEnd = parseDate(d.expected_end_date!)
-    if (dEnd.getTime() < weekStart.getTime()) continue
+    if (dEnd.getTime() < dStart.getTime()) continue
 
-    const dealWeeks = entityWeeks(d.expected_start_date, d.expected_end_date!)
-    if (dealWeeks === 0) continue
+    const days = overlapDays(dStart, dEnd, spanStart, spanEnd)
+    if (days === 0) continue
 
     const probability = d.probability_override ?? PIPELINE_STAGES[d.current_stage].probability
-    const weekly =
-      d.pricing_type === 'fixed'
-        ? (d.fixed_price ?? 0) / dealWeeks
-        : ((d.estimated_hours ?? 0) / dealWeeks) * (d.hourly_rate ?? 0)
+    const value = totalValue(d.pricing_type, d.fixed_price, d.estimated_hours, d.hourly_rate)
 
-    revenue += weekly * probability
+    revenue += value * (days / daysInclusive(dStart, dEnd)) * probability
   }
 
   return revenue
@@ -200,16 +225,31 @@ function pipelineProjectRevenueForWeek(weekStart: Date, deals: PipelineDeal[]): 
 export function calcMonthlyRevenue(input: RevenueInput): MonthRevenue {
   // מקורות שנפרסים על ציר הזמן — פרויקטים ועסקאות פרויקט
   const weeks = getWeeksInRange(input.monthStart, input.monthEnd).map<WeekRevenue>(weekStart => {
-    const monthFraction = monthFractionForWeek(weekStart, input.monthStart, input.monthEnd)
-    const projectRevenue = projectRevenueForWeek(weekStart, input.projects, input.allocations)
-    const pipelineRevenue = pipelineProjectRevenueForWeek(weekStart, input.deals)
+    const weekEnd = new Date(weekStart)
+    weekEnd.setUTCDate(weekEnd.getUTCDate() + 6)
+
+    const monthFraction =
+      overlapDays(weekStart, weekEnd, input.monthStart, input.monthEnd) / 7
+    const projectRevenue = projectRevenueForWeek(
+      weekStart,
+      input.monthStart,
+      input.monthEnd,
+      input.projects,
+      input.allocations,
+    )
+    const pipelineRevenue = pipelineProjectRevenueForWeek(
+      weekStart,
+      input.monthStart,
+      input.monthEnd,
+      input.deals,
+    )
 
     return {
       weekStart: toDateStr(weekStart),
       monthFraction,
       projectRevenue,
       pipelineRevenue,
-      total: (projectRevenue + pipelineRevenue) * monthFraction,
+      total: projectRevenue + pipelineRevenue,
     }
   })
 
@@ -221,9 +261,9 @@ export function calcMonthlyRevenue(input: RevenueInput): MonthRevenue {
     input.monthEnd,
   )
 
-  const projectRevenue = weeks.reduce((sum, w) => sum + w.projectRevenue * w.monthFraction, 0)
+  const projectRevenue = weeks.reduce((sum, w) => sum + w.projectRevenue, 0)
   const pipelineRevenue =
-    weeks.reduce((sum, w) => sum + w.pipelineRevenue * w.monthFraction, 0) + pipelineRetainerRevenue
+    weeks.reduce((sum, w) => sum + w.pipelineRevenue, 0) + pipelineRetainerRevenue
 
   const yearMonth = toDateStr(input.monthStart).slice(0, 7)
 

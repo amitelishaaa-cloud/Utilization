@@ -43,8 +43,8 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 **`lib/calculations/revenue.ts`**
 - `calcMonthlyRevenue(input: RevenueInput): MonthRevenue` — pure calculation of revenue for a calendar month
 - `RevenueInput` — `{ monthStart, monthEnd, projects, allocations, retainers, deals }`
-- `MonthRevenue` — `{ yearMonth, monthLabel, total, weeks: WeekRevenue[] }`
-- `WeekRevenue` — `{ weekStart, monthFraction, projectRevenue, retainerRevenue, pipelineRevenue, total }`
+- `MonthRevenue` — `{ yearMonth, monthLabel, projectRevenue, retainerRevenue, pipelineRevenue, total, weeks: WeekRevenue[] }`
+- `WeekRevenue` — `{ weekStart, monthFraction, projectRevenue, pipelineRevenue, total }` — weekly breakdown (retainers are monthly-level only)
 
 **`lib/calculations/revenue-fetcher.ts`**
 - `fetchMonthlyRevenue(userId, today): Promise<MonthRevenue>` — fetch and compute revenue for calendar month
@@ -55,11 +55,16 @@ related: [[Data-Model]], [[Cockpit]], [[Pipeline]], [[Projects]], [[Retainers]]
 ```
 capacity(week)   = capacity_exceptions.available_hours OR users.default_weekly_hours
 committed(week)  = Σ project_weekly_allocations OR (estimated_hours / total_weeks)
-                 + Σ retainer.monthly_hours / 4.33
+                 + Σ retainer.monthly_hours                                        # monthly entities, no division
 pipeline(week)   = Σ (deal.estimated_hours / deal_weeks) × stage_probability        # deal_type='project'
-                 + Σ (deal.monthly_hours / 4.33) × stage_probability                 # deal_type='retainer'
+                 + Σ deal.monthly_hours × stage_probability                         # deal_type='retainer', monthly semantics
                  # ריטיינר פתוח (no expected_end_date): תורם עד סוף חלון החישוב
 utilization      = (committed + pipeline) / capacity
+
+revenue(month)   = Σ project_weekly_revenue × weekly_month_fraction
+                 + Σ retainer.monthly_amount                                       # full monthly amount per active month
+                 + Σ pipeline_project_revenue × weekly_month_fraction × stage_probability
+                 + Σ pipeline_retainer_monthly_amount × stage_probability
 ```
 
 ## לוגיקת המלצות (priority order)

@@ -108,6 +108,33 @@ function makeInput(overrides: Partial<RevenueInput> = {}): RevenueInput {
 // ── פרויקטים ────────────────────────────────────────────────────────────────
 
 describe('calcMonthlyRevenue — פרויקטים', () => {
+  // רגרסיה: פרויקט שאורכו אינו כפולה שלמה של שבוע חופף ליותר שבועות קלנדריים
+  // מ-(end − start)/7. פריסה לפי תעריף שבועי הקצתה 77.59 שעות לפרויקט של 75.
+  it('פרויקט שכולו בתוך החודש תורם בדיוק את מלוא ערכו — לא יותר', () => {
+    const project = makeProject({
+      estimated_hours: 75,
+      hourly_rate: 110,
+      start_date: '2026-08-01', // שבת — נופל בשבוע שמתחיל 27/07
+      end_date: '2026-08-30',
+    })
+    const result = calcMonthlyRevenue(makeInput({ projects: [project] }))
+
+    expect(result.total).toBeCloseTo(75 * 110, 4)
+  })
+
+  it('פרויקט fixed שכולו בתוך החודש תורם בדיוק את המחיר הכולל', () => {
+    const project = makeProject({
+      pricing_type: 'fixed',
+      hourly_rate: null,
+      fixed_price: 1500,
+      start_date: '2026-08-03',
+      end_date: '2026-08-25',
+    })
+    const result = calcMonthlyRevenue(makeInput({ projects: [project] }))
+
+    expect(result.total).toBeCloseTo(1500, 6)
+  })
+
   // שעות ידניות גוברות על הפריסה השווה, בדיוק כמו במנוע הניצול.
   it('פרויקט hourly עם allocations — סכום השעות בפועל × תעריף', () => {
     const allocations: ProjectWeeklyAllocation[] = [
@@ -121,15 +148,13 @@ describe('calcMonthlyRevenue — פרויקטים', () => {
     expect(result.total).toBeCloseTo(30 * 100, 4)
   })
 
-  it('פרויקט hourly בלי allocations — פריסה שווה × תעריף', () => {
+  it('פרויקט hourly בלי allocations — כל השעות × תעריף כשהפרויקט בתוך החודש', () => {
     const result = calcMonthlyRevenue(makeInput({ projects: [makeProject()] }))
 
-    // 27 ימים → 27/7 שבועות; 4 שבועות מלאים באוגוסט
-    const projectWeeks = 27 / 7
-    expect(result.total).toBeCloseTo(4 * (40 / projectWeeks) * 100, 4)
+    expect(result.total).toBeCloseTo(40 * 100, 4)
   })
 
-  it('פרויקט fixed — מחיר כולל חלקי מספר השבועות בפרויקט', () => {
+  it('פרויקט fixed — המחיר הכולל כשהפרויקט בתוך החודש', () => {
     const project = makeProject({
       pricing_type: 'fixed',
       hourly_rate: null,
@@ -137,24 +162,52 @@ describe('calcMonthlyRevenue — פרויקטים', () => {
     })
     const result = calcMonthlyRevenue(makeInput({ projects: [project] }))
 
-    const projectWeeks = 27 / 7
-    expect(result.total).toBeCloseTo(4 * (12000 / projectWeeks), 4)
+    expect(result.total).toBe(12000)
   })
 
-  // הלב של הפריסה השווה: המכנה הוא אורך הפרויקט המלא, לא החלק שבתוך החודש.
-  it('פרויקט fixed שחורג מהחודש — המכנה נשאר אורך הפרויקט המלא', () => {
+  // הלב של הפריסה: המכנה הוא אורך הפרויקט המלא, המונה הוא ימי החפיפה עם החודש.
+  it('פרויקט fixed שחורג מהחודש — פרו-רטה לפי ימי החפיפה', () => {
     const project = makeProject({
       pricing_type: 'fixed',
       hourly_rate: null,
       fixed_price: 8000,
       start_date: '2026-08-17',
-      end_date: '2026-10-12', // 56 ימים → בדיוק 8 שבועות
+      end_date: '2026-10-12',
     })
     const result = calcMonthlyRevenue(makeInput({ projects: [project] }))
 
-    // שבועיים מלאים (08-17, 08-24) + 1/7 מהשבוע של 08-31
-    const perWeek = 8000 / 8
-    expect(result.total).toBeCloseTo(perWeek * (2 + LAST_WEEK_FRACTION), 4)
+    const projectDays = 15 + 30 + 12 // 17-31/08 + ספטמבר + 1-12/10 = 57
+    const daysInAugust = 15         // 17..31 באוגוסט
+    expect(result.total).toBeCloseTo(8000 * (daysInAugust / projectDays), 4)
+  })
+
+  // פרויקט שנפרס על כמה חודשים חייב להסתכם למחיר המלא, בלי לאבד ובלי לכפול.
+  it('סכום התרומות של פרויקט לאורך כל חודשיו שווה בדיוק לערכו', () => {
+    const project = makeProject({
+      pricing_type: 'fixed',
+      hourly_rate: null,
+      fixed_price: 8000,
+      start_date: '2026-08-17',
+      end_date: '2026-10-12',
+    })
+
+    const months: [number, number, number][] = [
+      [2026, 7, 31], // אוגוסט
+      [2026, 8, 30], // ספטמבר
+      [2026, 9, 31], // אוקטובר
+    ]
+    const sum = months.reduce((acc, [year, monthIdx, lastDay]) => {
+      const result = calcMonthlyRevenue(
+        makeInput({
+          monthStart: new Date(Date.UTC(year, monthIdx, 1)),
+          monthEnd: new Date(Date.UTC(year, monthIdx, lastDay)),
+          projects: [project],
+        }),
+      )
+      return acc + result.total
+    }, 0)
+
+    expect(sum).toBeCloseTo(8000, 6)
   })
 
   it('פרויקט שהסתיים לפני החודש או מתחיל אחריו — 0', () => {
@@ -173,21 +226,19 @@ describe('calcMonthlyRevenue — פרויקטים', () => {
     expect(result.total).toBe(0)
   })
 
-  // chk_end_after_start מתיר end_date === start_date, ואז אורך הפרויקט הוא 0.
-  // המנוע הקיים מחזיר Infinity במקרה הזה; כאן זה חייב להיות 0.
-  it('פרויקט שבו start_date === end_date — 0, לא Infinity ולא NaN', () => {
-    const sameDay = makeProject({ start_date: '2026-08-10', end_date: '2026-08-10' })
+  // chk_end_after_start מתיר end_date === start_date. בפריסה לפי ימים זה טווח
+  // תקין באורך יום אחד — הפרויקט תורם את מלוא ערכו, בלי Infinity.
+  it('פרויקט בן יום אחד תורם את מלוא ערכו, לא Infinity ולא NaN', () => {
     const sameDayFixed = makeProject({
-      id: 'p-2',
       pricing_type: 'fixed',
       hourly_rate: null,
       fixed_price: 5000,
       start_date: '2026-08-10',
       end_date: '2026-08-10',
     })
-    const result = calcMonthlyRevenue(makeInput({ projects: [sameDay, sameDayFixed] }))
+    const result = calcMonthlyRevenue(makeInput({ projects: [sameDayFixed] }))
 
-    expect(result.total).toBe(0)
+    expect(result.total).toBe(5000)
     expect(Number.isFinite(result.total)).toBe(true)
   })
 })
@@ -278,11 +329,10 @@ describe('calcMonthlyRevenue — עסקאות pipeline', () => {
   it('עסקת פרויקט hourly — משוקללת בהסתברות השלב', () => {
     const result = calcMonthlyRevenue(makeInput({ deals: [makeDeal()] }))
 
-    const dealWeeks = 27 / 7
-    expect(result.total).toBeCloseTo(4 * (40 / dealWeeks) * 100 * 0.55, 4)
+    expect(result.total).toBeCloseTo(40 * 100 * 0.55, 4)
   })
 
-  it('עסקת פרויקט fixed — פריסה שווה משוקללת בהסתברות', () => {
+  it('עסקת פרויקט fixed — המחיר הכולל משוקלל בהסתברות', () => {
     const deal = makeDeal({
       pricing_type: 'fixed',
       hourly_rate: null,
@@ -290,8 +340,7 @@ describe('calcMonthlyRevenue — עסקאות pipeline', () => {
     })
     const result = calcMonthlyRevenue(makeInput({ deals: [deal] }))
 
-    const dealWeeks = 27 / 7
-    expect(result.total).toBeCloseTo(4 * (12000 / dealWeeks) * 0.55, 4)
+    expect(result.total).toBeCloseTo(12000 * 0.55, 4)
   })
 
   // עסקת ריטיינר היא ישות חודשית בדיוק כמו רטיינר מחויב — הסכום החודשי
@@ -343,8 +392,7 @@ describe('calcMonthlyRevenue — עסקאות pipeline', () => {
   })
 
   it('probability_override גובר על הסתברות השלב', () => {
-    const dealWeeks = 27 / 7
-    const weekly = (40 / dealWeeks) * 100
+    const value = 40 * 100
 
     const withOverride = calcMonthlyRevenue(
       makeInput({ deals: [makeDeal({ current_stage: 'inquiry', probability_override: 0.75 })] }),
@@ -353,13 +401,12 @@ describe('calcMonthlyRevenue — עסקאות pipeline', () => {
       makeInput({ deals: [makeDeal({ current_stage: 'inquiry', probability_override: null })] }),
     )
 
-    expect(withOverride.total).toBeCloseTo(4 * weekly * 0.75, 4)
-    expect(withoutOverride.total).toBeCloseTo(4 * weekly * 0.10, 4)
+    expect(withOverride.total).toBeCloseTo(value * 0.75, 4)
+    expect(withoutOverride.total).toBeCloseTo(value * 0.10, 4)
   })
 
   it('כל שלבי ה-pipeline ממופים להסתברויות הקיימות', () => {
-    const dealWeeks = 27 / 7
-    const weekly = 4 * (40 / dealWeeks) * 100
+    const value = 40 * 100
     const stages = [
       ['inquiry', 0.10],
       ['proposal', 0.30],
@@ -370,19 +417,16 @@ describe('calcMonthlyRevenue — עסקאות pipeline', () => {
 
     for (const [stage, probability] of stages) {
       const result = calcMonthlyRevenue(makeInput({ deals: [makeDeal({ current_stage: stage })] }))
-      expect(result.total).toBeCloseTo(weekly * probability, 4)
+      expect(result.total).toBeCloseTo(value * probability, 4)
     }
   })
 
   it('עסקאות מרובות מסתכמות', () => {
-    const dealWeeks = 27 / 7
     const dealA = makeDeal({ id: 'deal-a', estimated_hours: 20, current_stage: 'negotiation' })
     const dealB = makeDeal({ id: 'deal-b', estimated_hours: 30, current_stage: 'proposal' })
     const result = calcMonthlyRevenue(makeInput({ deals: [dealA, dealB] }))
 
-    const expectedA = 4 * (20 / dealWeeks) * 100 * 0.55
-    const expectedB = 4 * (30 / dealWeeks) * 100 * 0.30
-    expect(result.total).toBeCloseTo(expectedA + expectedB, 4)
+    expect(result.total).toBeCloseTo(20 * 100 * 0.55 + 30 * 100 * 0.30, 4)
   })
 
   it('עסקה שאינה active — 0', () => {
@@ -457,6 +501,71 @@ describe('calcMonthlyRevenue — גבולות החודש', () => {
 
     expect(result.yearMonth).toBe('2028-02')
     expect(result.total).toBe(4330)
+  })
+})
+
+// ── תרחיש אמיתי ─────────────────────────────────────────────────────────────
+
+// הנתונים בפועל מאוגוסט 2026, מהם התגלה שהפריסה השבועית מנפחת פרויקטים.
+// הסכום הנכון אומת ידנית מול חישוב המשתמש: 19,622.10.
+describe('calcMonthlyRevenue — תרחיש אמיתי, אוגוסט 2026', () => {
+  it('מחזיר 19,622.10 על נתוני החשבון', () => {
+    const projects = [
+      makeProject({
+        id: 'p-1',
+        name: 'אוטומציה',
+        estimated_hours: 75,
+        hourly_rate: 110,
+        start_date: '2026-08-01',
+        end_date: '2026-08-30',
+      }),
+      makeProject({
+        id: 'p-2',
+        name: 'אוטומציה א-ג',
+        estimated_hours: 75,
+        hourly_rate: 110,
+        start_date: '2026-08-01',
+        end_date: '2026-08-30',
+      }),
+      makeProject({
+        id: 'p-3',
+        name: 'ששש',
+        pricing_type: 'fixed',
+        hourly_rate: null,
+        fixed_price: 1500,
+        estimated_hours: 15,
+        start_date: '2026-08-03',
+        end_date: '2026-08-25',
+      }),
+    ]
+    const retainers = [
+      makeRetainer({
+        name: 'ניהול חשבוניות',
+        monthly_hours: 15,
+        hourly_rate: 100,
+        start_date: '2026-08-05',
+        end_date: null,
+      }),
+    ]
+    const deals = [
+      makeDeal({
+        name: 'אוטומציה',
+        deal_type: 'retainer',
+        estimated_hours: null,
+        monthly_hours: 11,
+        hourly_rate: 111,
+        expected_start_date: '2026-08-01',
+        expected_end_date: '2026-08-31',
+        current_stage: 'inquiry', // 0.10
+      }),
+    ]
+
+    const result = calcMonthlyRevenue(makeInput({ projects, retainers, deals }))
+
+    expect(result.projectRevenue).toBeCloseTo(75 * 110 + 75 * 110 + 1500, 4)
+    expect(result.retainerRevenue).toBeCloseTo(15 * 100, 4)
+    expect(result.pipelineRevenue).toBeCloseTo(11 * 111 * 0.1, 4)
+    expect(result.total).toBeCloseTo(19622.1, 2)
   })
 })
 
