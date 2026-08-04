@@ -42,6 +42,45 @@ describe('groupWeeksByMonth', () => {
     expect(groupWeeksByMonth([])).toEqual([])
   })
 
+  // שבוע גבול (יום שני 31/08/2026): ראשון+שני (30-31/08) שייכים לאוגוסט,
+  // שלישי-רביעי-חמישי (1-3/09) שייכים לספטמבר. הקיבולת נפרסת 2/5 לאוגוסט
+  // ו-3/5 לספטמבר — לא מיוחסת במלואה לחודש שמכיל את מפתח יום השני.
+  it('פורסת קיבולת של שבוע גבול לפי ימי עבודה (5-יומי) בכל חודש', () => {
+    const weeks: WeekBreakdown[] = [
+      // שבוע מלא באוגוסט — ללא שינוי
+      { weekStart: '2026-08-24', committedHours: 20, pipelineHours: 0, capacity: 40, utilization: 0.5 },
+      // שבוע גבול: 31/08 (יום שני) — ראשון 30/08, שני 31/08 (אוגוסט) | שלישי-רביעי-חמישי 1-3/09 (ספטמבר)
+      { weekStart: '2026-08-31', committedHours: 20, pipelineHours: 0, capacity: 40, utilization: 0.5 },
+      // שבוע מלא בספטמבר — ללא שינוי
+      { weekStart: '2026-09-07', committedHours: 20, pipelineHours: 0, capacity: 40, utilization: 0.5 },
+    ]
+    const months = groupWeeksByMonth(weeks)
+
+    expect(months).toHaveLength(2)
+    const august = months.find(m => m.yearMonth === '2026-08')!
+    const september = months.find(m => m.yearMonth === '2026-09')!
+
+    // אוגוסט: שבוע מלא (40) + שבוע גבול פרוס 2/5×40=16 → 56
+    expect(august.weeks).toHaveLength(2) // חברות ה-weeks לתצוגה נשארת כפי שהייתה
+
+    // ספטמבר: שבוע גבול פרוס 3/5×40=24 + שבוע מלא (40) → 64
+    expect(september.weeks).toHaveLength(1)
+
+    // totalHours נשאר ללא פרואטה (החלטה מפורשת — רק קיבולת מתפרסת):
+    // אוגוסט totalHours = 20+20=40, totalCapacity=56 → utilization = 40/56
+    expect(august.utilization).toBeCloseTo(40 / 56, 4)
+    // ספטמבר totalHours = 20 (רק השבוע ה'שייך' לספטמבר לפי מפתח יום שני), totalCapacity=64 → 20/64
+    expect(september.utilization).toBeCloseTo(20 / 64, 4)
+  })
+
+  it('שבוע שכולו בתוך חודש אחד לא מושפע מהפריסה — התנהגות זהה לישן', () => {
+    const weeks: WeekBreakdown[] = [
+      { weekStart: '2026-07-06', committedHours: 34, pipelineHours: 0, capacity: 40, utilization: 0.85 },
+    ]
+    const months = groupWeeksByMonth(weeks)
+    expect(months[0].utilization).toBeCloseTo(34 / 40, 4)
+  })
+
   it('uses capacity-weighted formula when weeks have different capacities (capacity_exceptions)', () => {
     const weeks: WeekBreakdown[] = [
       // Week 1: normal capacity → 80% utilization

@@ -5,7 +5,7 @@ export type MonthSummary = {
   yearMonth: string    // "2026-07"
   monthLabel: string   // "יולי 2026"
   monthIndex: number   // 1-based
-  utilization: number  // capacity-weighted utilization: Σ(committed+pipeline) / Σcapacity
+  utilization: number  // capacity-weighted utilization: Σ(committed+pipeline) / Σcapacity (capacity is workday-prorated for boundary weeks, see workdaysInMonth)
   weeks: WeekBreakdown[]
 }
 
@@ -30,6 +30,28 @@ export function formatMonthLabel(yearMonth: string): string {
   return `${HEBREW_MONTHS[month - 1]} ${year}`
 }
 
+/** ראשון, שני, שלישי, רביעי, חמישי — 5 ימי העבודה, כאופסט ביחס למפתח יום שני. */
+const WORK_WEEK_OFFSETS = [-1, 0, 1, 2, 3]
+
+/**
+ * מספר ימי העבודה (מתוך 5, ראשון–חמישי) של השבוע שנופלים בחודש קלנדרי נתון.
+ * "יום שני" הוא רק מפתח האיסוף הפנימי של מנוע הניצול (ראה Utilization-Engine) —
+ * כאן ממפים אותו לחמשת ימי העבודה בפועל כדי לפרוס קיבולת נכון על פני גבול חודש.
+ * שבוע שכולו בתוך חודש אחד מחזיר 5; שבוע גבול מחזיר את החלק הרלוונטי.
+ */
+function workdaysInMonth(weekStart: string, yearMonth: string): number {
+  const [year, month, day] = weekStart.split('-').map(Number)
+  const monday = new Date(Date.UTC(year, month - 1, day))
+  let count = 0
+  for (const offset of WORK_WEEK_OFFSETS) {
+    const d = new Date(monday)
+    d.setUTCDate(d.getUTCDate() + offset)
+    const ym = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+    if (ym === yearMonth) count++
+  }
+  return count
+}
+
 export function groupWeeksByMonth(weeks: WeekBreakdown[]): MonthSummary[] {
   const groups = new Map<string, WeekBreakdown[]>()
   for (const week of weeks) {
@@ -38,7 +60,14 @@ export function groupWeeksByMonth(weeks: WeekBreakdown[]): MonthSummary[] {
     groups.get(key)!.push(week)
   }
   return Array.from(groups.entries()).map(([yearMonth, monthWeeks], i) => {
-    const totalCapacity = monthWeeks.reduce((sum, w) => sum + w.capacity, 0)
+    // הקיבולת נפרסת לפי ימי עבודה בפועל (ראשון–חמישי) שנופלים בחודש — לא
+    // לפי איזה חודש "מכיל" את מפתח יום השני. שבוע גבול תורם קיבולת חלקית
+    // לשני החודשים שהוא חוצה, ולכן סורקים את כל weeks (לא רק monthWeeks).
+    // totalHours נשאר ללא שינוי במכוון — מיוחס במלואו לחודש שמכיל את מפתח השבוע.
+    const totalCapacity = weeks.reduce((sum, w) => {
+      const days = workdaysInMonth(w.weekStart, yearMonth)
+      return days > 0 ? sum + w.capacity * (days / 5) : sum
+    }, 0)
     const totalHours = monthWeeks.reduce((sum, w) => sum + w.committedHours + w.pipelineHours, 0)
     return {
       yearMonth,

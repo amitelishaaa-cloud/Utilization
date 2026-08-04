@@ -51,7 +51,7 @@ related: [[Cockpit]], [[Projects]], [[Retainers]], [[Pipeline]], [[Clients]]
 
 לכן כל טווח תאריכים חייב לעבור דרך `DateRange`, ולא להיבנות כ-template string בתוך תא RTL. טקסט עברי נלווה (למשל `(משוער)` בטבלת הפרויקטים) נשאר **מחוץ** ל-`dir="ltr"`, כדי שיישאר בזרימת ה-RTL של התא.
 
-צרכנים: `projects-table.tsx`, `retainers-table.tsx`, `app/(app)/pipeline/[id]/page.tsx`. תאריכים **בודדים** (`created_at` בלקוחות, `weekStart` בתחזית, `closed_at` בעסקה, ה-timeline של stage history) לא מושפעים — אין שני מספרים שיתחלפו.
+צרכנים: `projects-table.tsx`, `retainers-table.tsx`, `app/(app)/pipeline/[id]/page.tsx`, `components/cockpit/forecast-columns.tsx` (טווח ראשון–חמישי לכל שבוע בפירוט השבועי — ראה [[Cockpit]]). תאריכים **בודדים** (`created_at` בלקוחות, `closed_at` בעסקה, ה-timeline של stage history) לא מושפעים — אין שני מספרים שיתחלפו.
 
 ## Navigation
 

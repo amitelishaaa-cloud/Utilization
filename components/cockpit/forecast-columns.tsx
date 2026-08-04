@@ -4,19 +4,19 @@ import { useState } from 'react'
 import { utilizationBarColorClass } from '@/lib/calculations/cockpit-helpers'
 import type { MonthSummary } from '@/lib/calculations/cockpit-helpers'
 import { parseDate, toDateStr } from '@/lib/calculations/utilization'
-import { formatDate } from '@/lib/utils'
+import DateRange from '@/components/ui/date-range'
 
 /**
- * מציג את שבוע העבודה (ראשון–חמישי) המקביל למפתח השבוע השמור (יום שני).
+ * שבוע העבודה (ראשון–חמישי) המקביל למפתח השבוע השמור (יום שני).
  * "יום שני" הוא רק מפתח האיסוף הפנימי של המנוע — ראשון הוא היום שלפניו,
- * חמישי הוא שלושה ימים אחריו. לא משנה את החישוב, רק את התווית המוצגת.
+ * חמישי הוא שלושה ימים אחריו. לא משנה את החישוב, רק את התאריכים המוצגים.
  */
-function workWeekLabel(weekStart: string): string {
+function workWeekRange(weekStart: string): { start: string; end: string } {
   const sunday = parseDate(weekStart)
   sunday.setUTCDate(sunday.getUTCDate() - 1)
   const thursday = parseDate(weekStart)
   thursday.setUTCDate(thursday.getUTCDate() + 3)
-  return `${formatDate(toDateStr(sunday))}–${formatDate(toDateStr(thursday))}`
+  return { start: toDateStr(sunday), end: toDateStr(thursday) }
 }
 
 export function ForecastColumns({ months }: { months: MonthSummary[] }) {
@@ -73,15 +73,18 @@ export function ForecastColumns({ months }: { months: MonthSummary[] }) {
             פירוט שבועי — {months[activeIdx].monthLabel}
           </p>
           <div className="space-y-1">
-            {months[activeIdx].weeks.map(week => (
-              <div
-                key={week.weekStart}
-                className="flex justify-between text-xs text-gray-600"
-              >
-                <span>{workWeekLabel(week.weekStart)}</span>
-                <span>{Math.round(week.utilization * 100)}%</span>
-              </div>
-            ))}
+            {months[activeIdx].weeks.map(week => {
+              const range = workWeekRange(week.weekStart)
+              return (
+                <div
+                  key={week.weekStart}
+                  className="flex justify-between text-xs text-gray-600"
+                >
+                  <DateRange start={range.start} end={range.end} />
+                  <span>{Math.round(week.utilization * 100)}%</span>
+                </div>
+              )
+            })}
           </div>
         </div>
       )}

@@ -15,7 +15,7 @@ related: [[Utilization-Engine]], [[Revenue-Forecast]], [[Data-Model]], [[UI-Comp
 - `lib/calculations/revenue-fetcher.ts` — `fetchMonthlyRevenue()`: שליפה עצמאית → `MonthRevenue` (ראה [[Revenue-Forecast]])
 - `components/cockpit/hero-metric.tsx` — מציג את ה-% הגדול + תווית חודש; prop `revenue?: ReactNode` מוסיף עמודה נלווית
 - `components/cockpit/revenue-metric.tsx` — הכנסה צפויה לחודש הקלנדרי + בלור free tier inline
-- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות); כל שבוע בפירוט מוצג כטווח **ראשון–חמישי** (`workWeekLabel()`: ראשון = יום לפני מפתח השבוע השמור, חמישי = 3 ימים אחריו — תווית בלבד, לא משנה את `week_start` השמור או את החישוב) דרך `formatDate()` (DD/MM/YYYY)
+- `components/cockpit/forecast-columns.tsx` — Client Component; עמודות חודשיות + click-to-toggle week breakdown; chevron SVG מסתובב 180° בעת הצגת פירוט (aria-expanded לנגישות); כל שבוע בפירוט מוצג כטווח **ראשון–חמישי** (`workWeekRange()`: ראשון = יום לפני מפתח השבוע השמור, חמישי = 3 ימים אחריו — תווית בלבד, לא משנה את `week_start` השמור או את החישוב) דרך `<DateRange>` (ראה [[UI-Components]]) — **לא** string גולמי, כדי ש-`dir="ltr"` ימנע היפוך bidi בתוך ה-RTL layout
 - `components/cockpit/recommendation-block.tsx` — תג צבעוני + טקסט המלצה
 - `components/cockpit/forecast-blur-gate.tsx` — עוטף עמודות+המלצה; blur לfree + CTA
 
@@ -24,7 +24,7 @@ related: [[Utilization-Engine]], [[Revenue-Forecast]], [[Data-Model]], [[UI-Comp
 **`lib/calculations/cockpit-helpers.ts`**
 - `MonthSummary` — `{ yearMonth, monthLabel, monthIndex, utilization, weeks: WeekBreakdown[] }`
 - `HeroMonth` — `{ monthIndex, monthLabel, utilization, nextMonthOverload?: { monthIndex, monthLabel, utilization } }` — עוטף דאטה לחודש הנוכחי + overload בחודש הבא
-- `groupWeeksByMonth(weeks): MonthSummary[]` — ממיין weeks לחודשים, capacity-weighted utilization
+- `groupWeeksByMonth(weeks): MonthSummary[]` — ממיין weeks לחודשים, capacity-weighted utilization. **קיבולת שבוע גבול נפרסת לפי ימי עבודה** (ראה למטה) — לא מיוחסת במלואה לחודש שמכיל את מפתח יום השני
 - `getHeroMonth(weeks, today?): HeroMonth` — מחזיר החודש הנוכחי בפי `today` (ברירת מחדל: `new Date()`). חישוב מבוסס local time (לא UTC). `nextMonthOverload` מאוכלס אם החודש הבא חורג מ-`UTILIZATION_OVERLOAD_THRESHOLD` (>110%)
 - `getStartOfCurrentWeek(today?): Date` — יום שני הנוכחי (UTC)
 - `addMonths(date, n): Date` — מוסיף n חודשים (UTC)
@@ -69,7 +69,9 @@ CockpitPage (Server)
 
 ## שבוע העבודה — ראשון–חמישי מול מפתח יום שני
 
-`week_start` השמור (DB, `WeekBreakdown.weekStart`) הוא תמיד יום שני — נורמליזציה טכנית של המנוע (ראה [[Utilization-Engine]]), לא הנחה על ימי עבודה. ה-UI **בלבד** ממיר זאת לתצוגת שבוע עבודה ישראלי: `ForecastColumns.workWeekLabel()` מציג ראשון (יום לפני ה-Monday השמור) עד חמישי (3 ימים אחריו). זו תווית תצוגה גרידא — לא נוגעת ב-`week_start` עצמו, ב-DB, או בשום חישוב.
+`week_start` השמור (DB, `WeekBreakdown.weekStart`) הוא תמיד יום שני — נורמליזציה טכנית של המנוע (ראה [[Utilization-Engine]]), לא הנחה על ימי עבודה. ה-UI ממיר זאת לתצוגת שבוע עבודה ישראלי: `ForecastColumns.workWeekRange()` מחזיר ראשון (יום לפני ה-Monday השמור) עד חמישי (3 ימים אחריו), מוצג דרך `<DateRange>`. זו תווית תצוגה גרידא — לא נוגעת ב-`week_start` עצמו, ב-DB, או בחישוב השבוע עצמו.
+
+**קיבולת חודשית כן מושפעת** — `groupWeeksByMonth` משתמש באותה מיפוי 5 ימי-עבודה כדי לפרוס את הקיבולת של שבוע גבול בין שני החודשים שהוא חוצה, פרופורציונלית למספר ימי העבודה של כל צד: `(ימי_עבודה_בחודש / 5) × קיבולת_השבוע_המלאה`. למשל שבוע ששני ימיו הראשונים (ראשון-שני) באוגוסט ושלושת האחרונים (שלישי-רביעי-חמישי) בספטמבר תורם `2/5×40=16` שעות לקיבולת אוגוסט ו-`3/5×40=24` שעות לקיבולת ספטמבר — לא 40 שעות שלמות לחודש אחד בלבד. **`totalHours` (committed+pipeline) לא פרוס** — נשאר מיוחס במלואו לחודש שמכיל את מפתח יום השני, כפי שהיה. מעוגן ב-`lib/calculations/__tests__/cockpit-helpers.test.ts`.
 
 ## מסך הגדרות (`/settings`)
 
